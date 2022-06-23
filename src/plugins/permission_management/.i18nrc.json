@@ -1,0 +1,7 @@
+{
+  "prefix": "permissionManagement",
+  "paths": {
+    "permissionManagement": "."
+  },
+  "translations": ["translations/ja-JP.json"]
+}
