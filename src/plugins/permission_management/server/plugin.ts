@@ -9,6 +9,7 @@ import {
 import { PermissionManagementPluginSetup, PermissionManagementPluginStart } from './types';
 import { defineRoutes } from './routes';
 import { samplePermission } from './saved_objects';
+import { evaluatePermissionRoute } from './routes/permission_evaluation';
 
 export class PermissionManagementPlugin
   implements Plugin<PermissionManagementPluginSetup, PermissionManagementPluginStart> {
@@ -26,6 +27,7 @@ export class PermissionManagementPlugin
 
     // Register server side APIs
     defineRoutes(router);
+    evaluatePermissionRoute(router);
 
     return {};
   }

@@ -287,7 +287,8 @@ export class Router implements IRouter {
         opensearchDashboardsRequest,
         opensearchDashboardsResponseFactory
       );
-      return hapiResponseAdapter.handle(opensearchDashboardsResponse);
+      return hapiResponseAdapter.
+      handle(opensearchDashboardsResponse);
     } catch (e) {
       this.log.error(e);
       // forward 401 errors from OpenSearch client
