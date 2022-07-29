@@ -139,18 +139,14 @@ export class SavedObjectsSerializer {
    * @param {string} id - The id of the saved object
    */
   public generateRawId(namespace: string | undefined, type: string, id?: string) {
-    const namespacePrefix =
-      namespace && this.registry.isSingleNamespace(type) ? `${namespace}:` : '';
-    return `${namespacePrefix}${type}:${id || uuid.v1()}`;
+    return `${type}:${id || uuid.v1()}`;
   }
 
   private trimIdPrefix(namespace: string | undefined, type: string, id: string) {
     assertNonEmptyString(id, 'document id');
     assertNonEmptyString(type, 'saved object type');
 
-    const namespacePrefix =
-      namespace && this.registry.isSingleNamespace(type) ? `${namespace}:` : '';
-    const prefix = `${namespacePrefix}${type}:`;
+    const prefix = `${type}:`;
 
     if (!id.startsWith(prefix)) {
       return id;
