@@ -146,7 +146,9 @@ export class SavedObjectsSerializer {
     assertNonEmptyString(id, 'document id');
     assertNonEmptyString(type, 'saved object type');
 
-    const prefix = `${type}:`;
+    const namespacePrefix =
+    namespace && this.registry.isSingleNamespace(type) ? `${namespace}:` : '';
+    const prefix = `${namespacePrefix}${type}:`;
 
     if (!id.startsWith(prefix)) {
       return id;
