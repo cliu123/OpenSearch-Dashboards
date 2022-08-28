@@ -52,6 +52,7 @@ export {
   FailedImport,
 } from './process_import_response';
 export { getDefaultTitle } from './get_default_title';
+export { getDefaultTenant } from './get_default_tenant';
 export { findObjects, findObject } from './find_objects';
 export { extractExportDetails, SavedObjectsExportResultDetails } from './extract_export_details';
 export { createFieldList } from './create_field_list';

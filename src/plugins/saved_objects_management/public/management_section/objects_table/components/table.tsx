@@ -48,7 +48,7 @@ import {
 } from '@elastic/eui';
 import { i18n } from '@osd/i18n';
 import { FormattedMessage } from '@osd/i18n/react';
-import { getDefaultTitle, getSavedObjectLabel } from '../../../lib';
+import { getDefaultTitle, getDefaultTenant, getSavedObjectLabel } from '../../../lib';
 import { SavedObjectWithMetadata } from '../../../types';
 import {
   SavedObjectsManagementActionServiceStart,
@@ -248,6 +248,29 @@ export class Table extends PureComponent<TableProps, TableState> {
           }
           return (
             <EuiLink href={basePath.prepend(path)}>{title || getDefaultTitle(object)}</EuiLink>
+          );
+        },
+      } as EuiTableFieldDataColumnType<SavedObjectWithMetadata<any>>,
+      {
+        field: 'meta.tenant',
+        name: i18n.translate('savedObjectsManagement.objectsTable.table.columnTenantName', {
+          defaultMessage: 'Tenant',
+        }),
+        description: i18n.translate(
+          'savedObjectsManagement.objectsTable.table.columnTenantDescription',
+          { defaultMessage: 'Tenant of the saved object' }
+        ),
+        dataType: 'string',
+        sortable: false,
+        'data-test-subj': 'savedObjectsTableRowTenant',
+        render: (tenant: string, object: SavedObjectWithMetadata) => {
+          const { path = '' } = object.meta.inAppUrl || {};
+          const canGoInApp = this.props.canGoInApp(object);
+          if (!canGoInApp) {
+            return <EuiText size="s">{tenant || getDefaultTenant(object)}</EuiText>;
+          }
+          return (
+            <EuiLink href={basePath.prepend(path)}>{tenant || getDefaultTenant(object)}</EuiLink>
           );
         },
       } as EuiTableFieldDataColumnType<SavedObjectWithMetadata<any>>,
