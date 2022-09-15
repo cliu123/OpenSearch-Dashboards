@@ -266,12 +266,7 @@ export class Table extends PureComponent<TableProps, TableState> {
         render: (tenant: string, object: SavedObjectWithMetadata) => {
           const { path = '' } = object.meta.inAppUrl || {};
           const canGoInApp = this.props.canGoInApp(object);
-          if (!canGoInApp) {
-            return <EuiText size="s">{tenant || getDefaultTenant(object)}</EuiText>;
-          }
-          return (
-            <EuiLink href={basePath.prepend(path)}>{tenant || getDefaultTenant(object)}</EuiLink>
-          );
+          return <EuiText size="s">{tenant || getDefaultTenant(object)}</EuiText>;
         },
       } as EuiTableFieldDataColumnType<SavedObjectWithMetadata<any>>,
       ...columnRegistry.getAll().map((column) => {

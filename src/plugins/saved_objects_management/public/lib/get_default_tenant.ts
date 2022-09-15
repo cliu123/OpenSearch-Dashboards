@@ -31,7 +31,10 @@
 export function getDefaultTenant(object: { id: string; type: string }) {
   let tenant = `${object.namespaces[0]}`;
   if (tenant === '') {
-    tenant = 'global_tanent';
+    tenant = 'Global';
+  }
+  if (tenant === '__user__') {
+    tenant = 'Private';
   }
   return tenant;
 }
