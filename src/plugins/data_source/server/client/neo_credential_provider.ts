@@ -14,7 +14,7 @@ import {
 } from '../../common/data_sources';
 
 const STS_ROLE_SESSION_DURATION = 900; // In Seconds
-const STS_PROVIDER_ARN = 'arn:aws:iam:aws::contextProvider/IdentityCenter';
+const STS_PROVIDER_ARN = 'arn:aws:iam::aws:contextProvider/IdentityCenter';
 
 export interface NeoUserInfo {
   applicationId: string;
