@@ -607,7 +607,7 @@ export class CreateDataSourceForm extends React.Component<
         break;
     }
   };
-
+  authOptions = credentialSourceOptions(this.props.allowedAuthTypes);
   renderContent = () => {
     return (
       <>
@@ -706,17 +706,18 @@ export class CreateDataSourceForm extends React.Component<
             'Provide authentication details require to gain access to the endpoint.'
           )}
 
-            {/* Credential source */}
-            <EuiSpacer size="l" />
-            <EuiFormRow>
-              <EuiSelect
-                options={credentialSourceOptions(this.props.allowedAuthTypes)}
-                value={this.state.auth.type}
-                onChange={(e) => this.onChangeAuthType(e)}
-                name="Credential"
-                data-test-subj="createDataSourceFormAuthTypeSelect"
-              />
-            </EuiFormRow>
+          {/* Credential source */}
+          <EuiSpacer size="l" />
+          <EuiFormRow>
+            <EuiSelect
+              options={this.authOptions}
+              value={this.state.auth.type}
+              onChange={(e) => this.onChangeAuthType(e)}
+              name="Credential"
+              data-test-subj="createDataSourceFormAuthTypeSelect"
+              disabled={this.authOptions.length <= 1}
+            />
+          </EuiFormRow>
 
             {/* Create New credentials */}
             {this.state.auth.type === AuthType.UsernamePasswordType

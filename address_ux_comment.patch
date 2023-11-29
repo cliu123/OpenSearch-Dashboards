@@ -1,0 +1,78 @@
+diff --git a/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.tsx b/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.tsx
+index 61bd988ea1..a006aba507 100644
+--- a/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.tsx
++++ b/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.tsx
+@@ -565,7 +565,7 @@ export class CreateDataSourceForm extends React.Component<
+         break;
+     }
+   };
+-
++  authOptions = credentialSourceOptions(this.props.allowedAuthTypes);
+   renderContent = () => {
+     return (
+       <EuiPageContent>
+@@ -667,11 +667,12 @@ export class CreateDataSourceForm extends React.Component<
+           <EuiSpacer size="l" />
+           <EuiFormRow>
+             <EuiSelect
+-              options={credentialSourceOptions(this.props.allowedAuthTypes)}
++              options={this.authOptions}
+               value={this.state.auth.type}
+               onChange={(e) => this.onChangeAuthType(e)}
+               name="Credential"
+               data-test-subj="createDataSourceFormAuthTypeSelect"
++              disabled={this.authOptions.length <= 1}
+             />
+           </EuiFormRow>
+ 
+diff --git a/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.tsx b/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.tsx
+index dd92b0faa5..93f571b2d7 100644
+--- a/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.tsx
++++ b/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.tsx
+@@ -798,7 +798,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+       </EuiPanel>
+     );
+   };
+-
++  authOptions = credentialSourceOptions(this.props.allowedAuthTypes);
+   /* Render Credentials Existing & new */
+   renderCredentialsSection = () => {
+     return (
+@@ -810,11 +810,12 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+           })}
+         >
+           <EuiSelect
+-            options={credentialSourceOptions(this.props.allowedAuthTypes)}
++            options={this.authOptions}
+             value={this.state.auth.type}
+             onChange={this.onChangeAuthType}
+             name="Credential"
+             data-test-subj="editDataSourceSelectAuthType"
++            disabled={this.authOptions.length <= 1}
+           />
+         </EuiFormRow>
+ 
+diff --git a/src/plugins/dev_tools/public/application.tsx b/src/plugins/dev_tools/public/application.tsx
+index 416b029db2..5d0ccb3cbb 100644
+--- a/src/plugins/dev_tools/public/application.tsx
++++ b/src/plugins/dev_tools/public/application.tsx
+@@ -185,16 +185,16 @@ function DevToolsWrapper({
+           <div className="devAppDataSourcePicker">
+             <EuiComboBox
+               aria-label={i18n.translate('devTool.devToolWrapper.DataSourceComboBoxAriaLabel', {
+-                defaultMessage: 'Select a Data Source',
++                defaultMessage: 'Select a data source',
+               })}
+               placeholder={i18n.translate('devTool.devToolWrapper.DataSourceComboBoxPlaceholder', {
+-                defaultMessage: 'Select a Data Source',
++                defaultMessage: 'Select a data source',
+               })}
+               singleSelection={{ asPlainText: true }}
+               options={dataSources}
+               selectedOptions={selectedOptions}
+               onChange={onChange}
+-              prepend="DataSource"
++              prepend="Data source"
+               compressed
+               isDisabled={!dataSourceEnabled}
+             />

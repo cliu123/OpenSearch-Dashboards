@@ -832,7 +832,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
       </EuiPanel>
     );
   };
-
+  authOptions = credentialSourceOptions(this.props.allowedAuthTypes);
   /* Render Credentials Existing & new */
   renderCredentialsSection = () => {
     return (
@@ -844,11 +844,12 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
           })}
         >
           <EuiSelect
-            options={credentialSourceOptions(this.props.allowedAuthTypes)}
+            options={this.authOptions}
             value={this.state.auth.type}
             onChange={this.onChangeAuthType}
             name="Credential"
             data-test-subj="editDataSourceSelectAuthType"
+            disabled={this.authOptions.length <= 1}
           />
         </EuiFormRow>
 
