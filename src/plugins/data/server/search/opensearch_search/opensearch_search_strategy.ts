@@ -73,7 +73,7 @@ export const opensearchSearchStrategyProvider = (
       });
 
       try {
-        const client = await decideClient(context, request);
+        const client = await decideClient(context, request, dataSource);
         const promise = shimAbortSignal(client.search(params), options?.abortSignal);
 
         const { body: rawResponse } = (await promise) as ApiResponse<SearchResponse<any>>;

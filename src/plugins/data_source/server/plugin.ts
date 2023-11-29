@@ -124,6 +124,7 @@ export class DataSourcePlugin implements Plugin<DataSourcePluginSetup, DataSourc
 
     return {
       createDataSourceError: (e: any) => createDataSourceError(e),
+      defaultClusterEnabled: () => config.defaultCluster,
     };
   }
 

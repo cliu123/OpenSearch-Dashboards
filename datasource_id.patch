@@ -1,0 +1,128 @@
+diff --git a/src/plugins/data/server/search/opensearch_search/decide_client.ts b/src/plugins/data/server/search/opensearch_search/decide_client.ts
+index 5f38b82ffb..0f9e3231f9 100644
+--- a/src/plugins/data/server/search/opensearch_search/decide_client.ts
++++ b/src/plugins/data/server/search/opensearch_search/decide_client.ts
+@@ -5,15 +5,22 @@
+ 
+ import { OpenSearchClient, RequestHandlerContext } from 'src/core/server';
+ import { IOpenSearchSearchRequest } from '..';
++// eslint-disable-next-line @osd/eslint/no-restricted-paths
++import { DataSourceError } from '../../../../data_source/server/lib/error';
++import { DataSourcePluginSetup } from '../../../../data_source/server';
+ 
+ export const decideClient = async (
+   context: RequestHandlerContext,
+-  request: IOpenSearchSearchRequest
++  request: IOpenSearchSearchRequest,
++  dataSource?: DataSourcePluginSetup
+ ): Promise<OpenSearchClient> => {
+   // if data source feature is disabled, return default opensearch client of current user
+-  const client =
+-    request.dataSourceId && context.dataSource
+-      ? await context.dataSource.opensearch.getClient(request.dataSourceId)
+-      : context.core.opensearch.client.asCurrentUser;
+-  return client;
++  if (request.dataSourceId && context.dataSource) {
++    return await context.dataSource.opensearch.getClient(request.dataSourceId);
++  }
++
++  if (!dataSource || dataSource.defaultClusterEnabled()) {
++    return context.core.opensearch.client.asCurrentUser;
++  }
++  throw new DataSourceError({ statusCode: 400 }, 'Data source id is required');
+ };
+diff --git a/src/plugins/data/server/search/opensearch_search/opensearch_search_strategy.test.ts b/src/plugins/data/server/search/opensearch_search/opensearch_search_strategy.test.ts
+index fe95e3d7d4..ffd272ccb5 100644
+--- a/src/plugins/data/server/search/opensearch_search/opensearch_search_strategy.test.ts
++++ b/src/plugins/data/server/search/opensearch_search/opensearch_search_strategy.test.ts
+@@ -31,11 +31,31 @@
+ import { RequestHandlerContext } from '../../../../../core/server';
+ import { pluginInitializerContextConfigMock } from '../../../../../core/server/mocks';
+ import { opensearchSearchStrategyProvider } from './opensearch_search_strategy';
++import { DataSourceError } from '../../../../data_source/server/lib/error';
++import { DataSourcePluginSetup } from '../../../../data_source/server';
++import { SearchUsage } from '../collectors';
+ 
+ describe('OpenSearch search strategy', () => {
+   const mockLogger: any = {
+     debug: () => {},
+   };
++
++  const mockSearchUsage: SearchUsage = {
++    trackError(): Promise<void> {
++      return Promise.resolve(undefined);
++    },
++    trackSuccess(duration: number): Promise<void> {
++      return Promise.resolve(undefined);
++    },
++  };
++
++  const mockDataSourcePluginSetup: DataSourcePluginSetup = {
++    createDataSourceError(err: any): DataSourceError {
++      return new DataSourceError({});
++    },
++    defaultClusterEnabled: jest.fn(() => false),
++  };
++
+   const body = {
+     body: {
+       _shards: {
+@@ -142,6 +162,21 @@ describe('OpenSearch search strategy', () => {
+     expect(mockOpenSearchApiCaller).not.toBeCalled();
+   });
+ 
++  it('send request with empty dataSourceId to get data source client should throw exception', async () => {
++    const opensearchSearch = await opensearchSearchStrategyProvider(
++      mockConfig$,
++      mockLogger,
++      mockSearchUsage,
++      mockDataSourcePluginSetup
++    );
++
++    await expect(
++      opensearchSearch.search((mockDataSourceEnabledContext as unknown) as RequestHandlerContext, {
++        dataSourceId: '',
++      })
++    ).rejects.toThrow(DataSourceError);
++  });
++
+   it('dataSource disabled, send request with dataSourceId get default client', async () => {
+     const opensearchSearch = await opensearchSearchStrategyProvider(mockConfig$, mockLogger);
+ 
+diff --git a/src/plugins/data/server/search/opensearch_search/opensearch_search_strategy.ts b/src/plugins/data/server/search/opensearch_search/opensearch_search_strategy.ts
+index ba50740e6b..7c0a6b0f4a 100644
+--- a/src/plugins/data/server/search/opensearch_search/opensearch_search_strategy.ts
++++ b/src/plugins/data/server/search/opensearch_search/opensearch_search_strategy.ts
+@@ -73,7 +73,7 @@ export const opensearchSearchStrategyProvider = (
+       });
+ 
+       try {
+-        const client = await decideClient(context, request);
++        const client = await decideClient(context, request, dataSource);
+         const promise = shimAbortSignal(client.search(params), options?.abortSignal);
+ 
+         const { body: rawResponse } = (await promise) as ApiResponse<SearchResponse<any>>;
+diff --git a/src/plugins/data_source/server/plugin.ts b/src/plugins/data_source/server/plugin.ts
+index d72818a268..dce65e9ae3 100644
+--- a/src/plugins/data_source/server/plugin.ts
++++ b/src/plugins/data_source/server/plugin.ts
+@@ -124,6 +124,7 @@ export class DataSourcePlugin implements Plugin<DataSourcePluginSetup, DataSourc
+ 
+     return {
+       createDataSourceError: (e: any) => createDataSourceError(e),
++      defaultClusterEnabled: () => config.defaultCluster,
+     };
+   }
+ 
+diff --git a/src/plugins/data_source/server/types.ts b/src/plugins/data_source/server/types.ts
+index 045ef01110..169bba8a89 100644
+--- a/src/plugins/data_source/server/types.ts
++++ b/src/plugins/data_source/server/types.ts
+@@ -56,6 +56,7 @@ declare module 'src/core/server' {
+ 
+ export interface DataSourcePluginSetup {
+   createDataSourceError: (err: any) => DataSourceError;
++  defaultClusterEnabled: () => boolean;
+ }
+ // eslint-disable-next-line @typescript-eslint/no-empty-interface
+ export interface DataSourcePluginStart {}

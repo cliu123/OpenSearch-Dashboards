@@ -5,15 +5,22 @@
 
 import { OpenSearchClient, RequestHandlerContext } from 'src/core/server';
 import { IOpenSearchSearchRequest } from '..';
+// eslint-disable-next-line @osd/eslint/no-restricted-paths
+import { DataSourceError } from '../../../../data_source/server/lib/error';
+import { DataSourcePluginSetup } from '../../../../data_source/server';
 
 export const decideClient = async (
   context: RequestHandlerContext,
-  request: IOpenSearchSearchRequest
+  request: IOpenSearchSearchRequest,
+  dataSource?: DataSourcePluginSetup
 ): Promise<OpenSearchClient> => {
   // if data source feature is disabled, return default opensearch client of current user
-  const client =
-    request.dataSourceId && context.dataSource
-      ? await context.dataSource.opensearch.getClient(request.dataSourceId)
-      : context.core.opensearch.client.asCurrentUser;
-  return client;
+  if (request.dataSourceId && context.dataSource) {
+    return await context.dataSource.opensearch.getClient(request.dataSourceId);
+  }
+
+  if (!dataSource || dataSource.defaultClusterEnabled()) {
+    return context.core.opensearch.client.asCurrentUser;
+  }
+  throw new DataSourceError({ statusCode: 400 }, 'Data source id is required');
 };
