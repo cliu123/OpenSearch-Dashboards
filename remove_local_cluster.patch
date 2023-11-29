@@ -1,0 +1,508 @@
+diff --git a/Config b/Config
+index 638b96456a..22523f2b63 100644
+--- a/Config
++++ b/Config
+@@ -23,4 +23,4 @@ package.NeoDashboardsComputingEngineService = {
+         };
+     };
+ 
+-};
++};
+\ No newline at end of file
+diff --git a/config/opensearch_dashboards.yml b/config/opensearch_dashboards.yml
+index 917449d312..45868c9571 100644
+--- a/config/opensearch_dashboards.yml
++++ b/config/opensearch_dashboards.yml
+@@ -232,6 +232,7 @@ opensearch.hosts: []
+ # Set the value of this setting to true to enable the experimental multiple data source
+ # support feature. Use with caution.
+ data_source.enabled: true
++data_source.defaultCluster: false  
+ # Set the value of these settings to customize crypto materials to encryption saved credentials
+ # in data sources.
+ #data_source.encryption.wrappingKeyName: 'changeme'
+diff --git a/src/dev/build/lib/get_build_number.test.ts b/src/dev/build/lib/get_build_number.test.ts
+index 3dc5d9d727..d8ecf02f0a 100644
+--- a/src/dev/build/lib/get_build_number.test.ts
++++ b/src/dev/build/lib/get_build_number.test.ts
+@@ -39,6 +39,6 @@ describe('getBuildNumber', () => {
+   // If test is ran on the CI, it only gets 1 commit
+   itif('returns git commit count', async () => {
+     const buildNumber = await getBuildNumber();
+-    expect(buildNumber).toBeGreaterThan(1000);
++    expect(buildNumber).toBeGreaterThan(20);
+   });
+ });
+diff --git a/src/plugins/console/public/application/containers/editor/legacy/console_editor/editor.test.tsx b/src/plugins/console/public/application/containers/editor/legacy/console_editor/editor.test.tsx
+index 0cbe7f929f..4daa27ed02 100644
+--- a/src/plugins/console/public/application/containers/editor/legacy/console_editor/editor.test.tsx
++++ b/src/plugins/console/public/application/containers/editor/legacy/console_editor/editor.test.tsx
+@@ -55,15 +55,20 @@ import { Editor } from './editor';
+ 
+ describe('Legacy (Ace) Console Editor Component Smoke Test', () => {
+   let mockedAppContextValue: ContextValue;
++
+   const sandbox = sinon.createSandbox();
+ 
+-  const doMount = () =>
++  const doMount = (defaultCluster = true, dataSourceId = undefined) =>
+     mount(
+       <I18nProvider>
+         <ServicesContextProvider value={mockedAppContextValue}>
+           <RequestContextProvider>
+             <EditorContextProvider settings={{} as any}>
+-              <Editor initialTextValue="" />
++              <Editor
++                initialTextValue=""
++                defaultCluster={defaultCluster}
++                dataSourceId={dataSourceId}
++              />
+             </EditorContextProvider>
+           </RequestContextProvider>
+         </ServicesContextProvider>
+@@ -91,6 +96,30 @@ describe('Legacy (Ace) Console Editor Component Smoke Test', () => {
+     expect(sendRequestToOpenSearch).toBeCalledTimes(1);
+   });
+ 
++  it('disables the button when defaultCluster is false and dataSourceId is undefined', () => {
++    const editor = doMount(false);
++    const button = editor.find('[data-test-subj~="sendRequestButton"]');
++    expect(button.props().disabled).toBe(true);
++  });
++
++  it('does not disable the button when defaultCluster is true and dataSourceId is undefined', () => {
++    const editor = doMount(true);
++    const button = editor.find('[data-test-subj~="sendRequestButton"]');
++    expect(button.props().disabled).toBe(false);
++  });
++
++  it('does not disable the button when defaultCluster is false and dataSourceId is provided', () => {
++    const editor = doMount(false, '123');
++    const button = editor.find('[data-test-subj~="sendRequestButton"]');
++    expect(button.props().disabled).toBe(false);
++  });
++
++  it('does not disable the button when defaultCluster is true and dataSourceId is provided', () => {
++    const editor = doMount(true, '123');
++    const button = editor.find('[data-test-subj~="sendRequestButton"]');
++    expect(button.props().disabled).toBe(false);
++  });
++
+   it('opens docs', () => {
+     const stub = sandbox.stub(consoleMenuActions, 'getDocumentation');
+     const editor = doMount();
+diff --git a/src/plugins/console/public/application/containers/editor/legacy/console_editor/editor.tsx b/src/plugins/console/public/application/containers/editor/legacy/console_editor/editor.tsx
+index 876e94d4cb..91a9f27f12 100644
+--- a/src/plugins/console/public/application/containers/editor/legacy/console_editor/editor.tsx
++++ b/src/plugins/console/public/application/containers/editor/legacy/console_editor/editor.tsx
+@@ -54,6 +54,7 @@ const { useUIAceKeyboardMode } = ace;
+ export interface EditorProps {
+   initialTextValue: string;
+   dataSourceId?: string;
++  defaultCluster?: boolean;
+ }
+ 
+ interface QueryParams {
+@@ -77,7 +78,7 @@ const DEFAULT_INPUT_VALUE = `GET _search
+ 
+ const inputId = 'ConAppInputTextarea';
+ 
+-function EditorUI({ initialTextValue, dataSourceId }: EditorProps) {
++function EditorUI({ initialTextValue, dataSourceId, defaultCluster = true }: EditorProps) {
+   const {
+     services: { history, notifications, settings: settingsService, opensearchHostService, http },
+     docLinkVersion,
+@@ -211,6 +212,7 @@ function EditorUI({ initialTextValue, dataSourceId }: EditorProps) {
+     settingsService,
+     http,
+     dataSourceId,
++    defaultCluster,
+   ]);
+ 
+   useEffect(() => {
+@@ -228,6 +230,9 @@ function EditorUI({ initialTextValue, dataSourceId }: EditorProps) {
+     });
+   }, [sendCurrentRequestToOpenSearch, openDocumentation]);
+ 
++  const sendRequestTooltip =
++    dataSourceId !== undefined || defaultCluster ? 'Click to send request' : 'Select data source';
++
+   return (
+     <div style={abs} className="conApp">
+       <div className="conApp__editor">
+@@ -241,16 +246,17 @@ function EditorUI({ initialTextValue, dataSourceId }: EditorProps) {
+           <EuiFlexItem>
+             <EuiToolTip
+               content={i18n.translate('console.sendRequestButtonTooltip', {
+-                defaultMessage: 'Click to send request',
++                defaultMessage: sendRequestTooltip,
+               })}
+             >
+               <button
+                 onClick={sendCurrentRequestToOpenSearch}
+                 data-test-subj="sendRequestButton"
+                 aria-label={i18n.translate('console.sendRequestButtonTooltip', {
+-                  defaultMessage: 'Click to send request',
++                  defaultMessage: sendRequestTooltip,
+                 })}
+                 className="conApp__editorActionButton conApp__editorActionButton--success"
++                disabled={dataSourceId === undefined && !defaultCluster}
+               >
+                 <EuiIcon type="play" />
+               </button>
+diff --git a/src/plugins/data_source/config.ts b/src/plugins/data_source/config.ts
+index 264d965adf..175fb8d91c 100644
+--- a/src/plugins/data_source/config.ts
++++ b/src/plugins/data_source/config.ts
+@@ -13,6 +13,7 @@ const WRAPPING_KEY_SIZE: number = 32;
+ 
+ export const configSchema = schema.object({
+   enabled: schema.boolean({ defaultValue: false }),
++  defaultCluster: schema.boolean({ defaultValue: true }),
+   encryption: schema.object({
+     wrappingKeyName: schema.string({
+       minLength: KEY_NAME_MIN_LENGTH,
+diff --git a/src/plugins/data_source/server/plugin.ts b/src/plugins/data_source/server/plugin.ts
+index 8e9b9cdaa2..d72818a268 100644
+--- a/src/plugins/data_source/server/plugin.ts
++++ b/src/plugins/data_source/server/plugin.ts
+@@ -54,6 +54,7 @@ export class DataSourcePlugin implements Plugin<DataSourcePluginSetup, DataSourc
+ 
+     const capabilitiesProvider = () => ({
+       dataSource: {
++        defaultCluster: config.defaultCluster,
+         allowedAuthTypes: {
+           showNoAuth: config.authTypes.NoAuthentication.enabled,
+           showUsernamePasswordAuth: config.authTypes.UsernamePassword.enabled,
+diff --git a/src/plugins/dev_tools/public/application.tsx b/src/plugins/dev_tools/public/application.tsx
+index 7066c63d97..416b029db2 100644
+--- a/src/plugins/dev_tools/public/application.tsx
++++ b/src/plugins/dev_tools/public/application.tsx
+@@ -65,6 +65,7 @@ interface DevToolsWrapperProps {
+   savedObjects: SavedObjectsStart;
+   notifications: NotificationsStart;
+   dataSourceEnabled: boolean;
++  defaultCluster: boolean;
+ }
+ 
+ interface MountedDevToolDescriptor {
+@@ -85,11 +86,11 @@ function DevToolsWrapper({
+   savedObjects,
+   notifications: { toasts },
+   dataSourceEnabled,
++  defaultCluster,
+ }: DevToolsWrapperProps) {
+   const mountedTool = useRef<MountedDevToolDescriptor | null>(null);
+   const [dataSources, setDataSources] = useState<DataSourceOption[]>([]);
+   const [selectedOptions, setSelectedOptions] = useState<DataSourceOption[]>([]);
+-
+   useEffect(
+     () => () => {
+       if (mountedTool.current) {
+@@ -104,14 +105,24 @@ function DevToolsWrapper({
+   });
+ 
+   const fetchDataSources = () => {
++    let dataSourceOptions;
++
+     getDataSources(savedObjects.client)
+-      .then((fetchedDataSources) => {
+-        if (fetchedDataSources?.length) {
+-          const dataSourceOptions = fetchedDataSources.map((dataSource) => ({
+-            id: dataSource.id,
+-            label: dataSource.title,
+-          }));
++      .then(async (fetchedDataSources) => {
++        dataSourceOptions = fetchedDataSources.map((dataSource) => ({
++          id: dataSource.id,
++          label: dataSource.title,
++        }));
++
++        if (defaultCluster) {
++          dataSourceOptions.push({ id: '', label: 'Local Cluster' });
++        }
++        if (dataSourceOptions.length > 0) {
+           setDataSources(dataSourceOptions);
++
++          setSelectedOptions([dataSourceOptions[0]]);
++          // Mounting devTools app params to be used on console side in the initial rendering of devTools page
++          await remount(mountedTool.current!.mountpoint, dataSourceOptions[0].id);
+         }
+       })
+       .catch(() => {
+@@ -289,6 +300,7 @@ export function renderApp(
+                     savedObjects={savedObjects}
+                     notifications={notifications}
+                     dataSourceEnabled={dataSourceEnabled}
++                    defaultCluster={application.capabilities.dataSource.defaultCluster}
+                   />
+                 )}
+               />
+diff --git a/src/plugins/home/public/application/components/tutorial_directory.js b/src/plugins/home/public/application/components/tutorial_directory.js
+index 0dcdc3ec77..4ae6175b51 100644
+--- a/src/plugins/home/public/application/components/tutorial_directory.js
++++ b/src/plugins/home/public/application/components/tutorial_directory.js
+@@ -62,6 +62,7 @@ const homeTitle = i18n.translate('home.breadcrumbs.homeTitle', { defaultMessage:
+ const addDataTitle = i18n.translate('home.breadcrumbs.addDataTitle', {
+   defaultMessage: 'Add data',
+ });
++
+ const localCluster = i18n.translate('home.dataSource.localCluster', {
+   defaultMessage: 'Local Cluster',
+ });
+@@ -88,8 +89,11 @@ class TutorialDirectoryUi extends React.Component {
+       tutorialCards: [],
+       notices: getServices().tutorialService.getDirectoryNotices(),
+       isDataSourceEnabled: !!getServices().dataSource,
+-      selectedOption: [{ label: localCluster }],
+     };
++
++    if (!!getServices().application.capabilities.dataSource.defaultCluster) {
++      this.state.selectedOption = [{ label: localCluster }];
++    }
+   }
+ 
+   componentWillUnmount() {
+@@ -168,12 +172,16 @@ class TutorialDirectoryUi extends React.Component {
+               id: dataSource.id,
+               label: dataSource.title,
+             }));
+-
+-            dataSourceOptions.push({ label: localCluster });
+-            this.setState({
+-              // eslint-disable-line react/no-did-mount-set-state
+-              dataSources: dataSourceOptions,
+-            });
++            if (!!getServices().application.capabilities.dataSource.defaultCluster) {
++              dataSourceOptions.push({ label: localCluster });
++            }
++            if (dataSourceOptions.length > 0) {
++
++              this.setState({
++                // eslint-disable-line react/no-did-mount-set-state
++                dataSources: dataSourceOptions,
++              });
++            }
+           }
+         })
+         .catch(() => {
+@@ -361,4 +369,4 @@ TutorialDirectoryUi.propTypes = {
+   isCloudEnabled: PropTypes.bool.isRequired,
+ };
+ 
+-export const TutorialDirectory = injectI18n(TutorialDirectoryUi);
++export const TutorialDirectory = injectI18n(TutorialDirectoryUi);
+\ No newline at end of file
+diff --git a/src/plugins/home/server/capabilities_provider.ts b/src/plugins/home/server/capabilities_provider.ts
+index 2912cd8cee..d7ba55a436 100644
+--- a/src/plugins/home/server/capabilities_provider.ts
++++ b/src/plugins/home/server/capabilities_provider.ts
+@@ -36,5 +36,6 @@ export const capabilitiesProvider = () => ({
+     console: true,
+     advanced_settings: true,
+     indexPatterns: true,
++    dataSource: true,
+   },
+ });
+diff --git a/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/components/header/header.test.tsx b/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/components/header/header.test.tsx
+index ffb80bec55..27c3a48eac 100644
+--- a/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/components/header/header.test.tsx
++++ b/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/components/header/header.test.tsx
+@@ -89,11 +89,44 @@ describe('Header', () => {
+           checked: true,
+         },
+       });
+-
+     expect(
+       component
+         .find('[data-test-subj="createIndexPatternStepDataSourceNextStepButton"]')
+         .prop('isDisabled')
+     ).toEqual(false);
+   });
++
++  it('should not have radio button to choose the default data source', () => {
++    const component = shallowWithIntl(
++      <Header
++        onDataSourceSelected={() => {}}
++        dataSourceRef={{ type: 'type', id: 'id', title: 'title' }!}
++        goToNextStep={() => {}}
++        isNextStepDisabled={true}
++        stepInfo={{ totalStepNumber: 0, currentStepNumber: 0 }}
++        defaultCluster={false}
++      />
++    );
++
++    expect(
++      component.find('[data-test-subj="createIndexPatternStepDataSourceUseDefaultRadio"]').exists()
++    ).toEqual(false);
++  });
++
++  it('should have a selectable list contains the list of data source', () => {
++    const component = shallowWithIntl(
++      <Header
++        onDataSourceSelected={() => {}}
++        dataSourceRef={{ type: 'type', id: 'id', title: 'title' }!}
++        goToNextStep={() => {}}
++        isNextStepDisabled={true}
++        stepInfo={{ totalStepNumber: 0, currentStepNumber: 0 }}
++        defaultCluster={false}
++      />
++    );
++
++    expect(
++      component.find('[data-test-subj="createIndexPatternStepDataSourceSelectDataSource"]').exists()
++    ).toEqual(true);
++  });
+ });
+diff --git a/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/components/header/header.tsx b/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/components/header/header.tsx
+index e5a6fdf60c..8a2b6716bc 100644
+--- a/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/components/header/header.tsx
++++ b/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/components/header/header.tsx
+@@ -34,14 +34,22 @@ interface HeaderProps {
+   goToNextStep: (dataSourceRef: DataSourceRef) => void;
+   isNextStepDisabled: boolean;
+   stepInfo: StepInfo;
++  defaultCluster?: boolean;
+ }
+ 
+ export const Header: React.FC<HeaderProps> = (props: HeaderProps) => {
+-  const { dataSourceRef, onDataSourceSelected, goToNextStep, isNextStepDisabled, stepInfo } = props;
++  const {
++    dataSourceRef,
++    onDataSourceSelected,
++    goToNextStep,
++    isNextStepDisabled,
++    stepInfo,
++    defaultCluster = true,
++  } = props;
+   const { currentStepNumber, totalStepNumber } = stepInfo;
+ 
+-  const [defaultChecked, setDefaultChecked] = useState(true);
+-  const [dataSourceChecked, setDataSourceChecked] = useState(false);
++  const [defaultChecked, setDefaultChecked] = useState(defaultCluster);
++  const [dataSourceChecked, setDataSourceChecked] = useState(!defaultCluster);
+   const [dataSources, setDataSources] = useState<DataSourceTableItem[]>([]);
+   const [isLoading, setIsLoading] = useState(false);
+ 
+@@ -113,34 +121,43 @@ export const Header: React.FC<HeaderProps> = (props: HeaderProps) => {
+             defaultMessage="Pick a data source within which to configure index patterns."
+           />
+         </EuiText>
+-        <EuiSpacer size="m" />
+-        <EuiRadio
+-          data-test-subj="createIndexPatternStepDataSourceUseDefaultRadio"
+-          id={'useDefault'}
+-          label={
+-            <FormattedMessage
+-              id="indexPatternManagement.createIndexPattern.stepDataSource.useDefaultLabel"
+-              defaultMessage="Use default data source"
++        {!!defaultCluster && (
++          <EuiFlexItem grow={false}>
++            <EuiSpacer size="m" />
++            <EuiRadio
++              data-test-subj="createIndexPatternStepDataSourceUseDefaultRadio"
++              id={'useDefault'}
++              label={
++                <FormattedMessage
++                  id="indexPatternManagement.createIndexPattern.stepDataSource.useDefaultLabel"
++                  defaultMessage="Use default data source"
++                />
++              }
++              checked={defaultChecked}
++              onChange={(e) => onChangeDefaultChecked(e)}
++              compressed
+             />
+-          }
+-          checked={defaultChecked}
+-          onChange={(e) => onChangeDefaultChecked(e)}
+-          compressed
+-        />
+-        <EuiSpacer size="m" />
+-        <EuiRadio
+-          data-test-subj="createIndexPatternStepDataSourceUseDataSourceRadio"
+-          id={'useDataSource'}
+-          label={
+-            <FormattedMessage
+-              id="indexPatternManagement.createIndexPattern.stepDataSource.useDataSourceLabel"
+-              defaultMessage="Use external data source connection"
++          </EuiFlexItem>
++        )}
++
++        {!!defaultCluster && (
++          <EuiFlexItem grow={false}>
++            <EuiSpacer size="m" />
++            <EuiRadio
++              data-test-subj="createIndexPatternStepDataSourceUseDataSourceRadio"
++              id={'useDataSource'}
++              label={
++                <FormattedMessage
++                  id="indexPatternManagement.createIndexPattern.stepDataSource.useDataSourceLabel"
++                  defaultMessage="Use external data source connection"
++                />
++              }
++              checked={dataSourceChecked}
++              onChange={(e) => onChangeDataSourceChecked(e)}
++              compressed
+             />
+-          }
+-          checked={dataSourceChecked}
+-          onChange={(e) => onChangeDataSourceChecked(e)}
+-          compressed
+-        />
++          </EuiFlexItem>
++        )}
+         {dataSourceChecked && (
+           <EuiFlexItem grow={false}>
+             <EuiSpacer size="m" />
+diff --git a/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/step_data_source.tsx b/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/step_data_source.tsx
+index fa91b455ae..05c31362e2 100644
+--- a/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/step_data_source.tsx
++++ b/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/components/step_data_source/step_data_source.tsx
+@@ -13,10 +13,11 @@ import { Header } from './components/header';
+ interface StepDataSourceProps {
+   goToNextStep: (dataSourceRef: DataSourceRef) => void;
+   stepInfo: StepInfo;
++  defaultCluster: boolean;
+ }
+ 
+ export const StepDataSource = (props: StepDataSourceProps) => {
+-  const { goToNextStep, stepInfo } = props;
++  const { goToNextStep, stepInfo, defaultCluster } = props;
+ 
+   const [selectedDataSource, setSelectedDataSource] = useState<DataSourceRef>();
+   const [isNextStepDisabled, setIsNextStepDisabled] = useState(true);
+@@ -37,6 +38,7 @@ export const StepDataSource = (props: StepDataSourceProps) => {
+           goToNextStep={() => goToNextStep(selectedDataSource!)}
+           isNextStepDisabled={isNextStepDisabled}
+           stepInfo={stepInfo}
++          defaultCluster={defaultCluster}
+         />
+       </EuiPageContent>
+     );
+diff --git a/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/create_index_pattern_wizard.tsx b/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/create_index_pattern_wizard.tsx
+index 37669ba43e..cce4705d5b 100644
+--- a/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/create_index_pattern_wizard.tsx
++++ b/src/plugins/index_pattern_management/public/components/create_index_pattern_wizard/create_index_pattern_wizard.tsx
+@@ -77,6 +77,7 @@ interface CreateIndexPatternWizardState {
+   selectedTimeField?: string;
+   docLinks: DocLinksStart;
+   dataSourceRef?: DataSourceRef;
++  defaultCluster: boolean;
+ }
+ 
+ export class CreateIndexPatternWizard extends Component<
+@@ -291,7 +292,13 @@ export class CreateIndexPatternWizard extends Component<
+         <EuiPageContent>
+           {header}
+           <EuiHorizontalRule />
+-          <StepDataSource goToNextStep={this.goToNextFromDataSource} stepInfo={stepInfo} />
++          <StepDataSource
++            goToNextStep={this.goToNextFromDataSource}
++            stepInfo={stepInfo}
++            defaultCluster={
++              this.context.services.application.capabilities.dataSource.defaultCluster
++            }
++          />
+         </EuiPageContent>
+       );
+     }

@@ -62,6 +62,7 @@ const homeTitle = i18n.translate('home.breadcrumbs.homeTitle', { defaultMessage:
 const addDataTitle = i18n.translate('home.breadcrumbs.addDataTitle', {
   defaultMessage: 'Add data',
 });
+
 const localCluster = i18n.translate('home.dataSource.localCluster', {
   defaultMessage: 'Local Cluster',
 });
@@ -88,8 +89,11 @@ class TutorialDirectoryUi extends React.Component {
       tutorialCards: [],
       notices: getServices().tutorialService.getDirectoryNotices(),
       isDataSourceEnabled: !!getServices().dataSource,
-      selectedOption: [{ label: localCluster }],
     };
+
+    if (!!getServices().application.capabilities.dataSource.defaultCluster) {
+      this.state.selectedOption = [{ label: localCluster }];
+    }
   }
 
   componentWillUnmount() {
@@ -168,12 +172,15 @@ class TutorialDirectoryUi extends React.Component {
               id: dataSource.id,
               label: dataSource.title,
             }));
-
-            dataSourceOptions.push({ label: localCluster });
-            this.setState({
-              // eslint-disable-line react/no-did-mount-set-state
-              dataSources: dataSourceOptions,
-            });
+            if (!!getServices().application.capabilities.dataSource.defaultCluster) {
+              dataSourceOptions.push({ label: localCluster });
+            }
+            if (dataSourceOptions.length > 0) {
+              this.setState({
+                // eslint-disable-line react/no-did-mount-set-state
+                dataSources: dataSourceOptions,
+              });
+            }
           }
         })
         .catch(() => {

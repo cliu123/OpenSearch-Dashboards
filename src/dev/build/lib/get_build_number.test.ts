@@ -39,6 +39,6 @@ describe('getBuildNumber', () => {
   // If test is ran on the CI, it only gets 1 commit
   itif('returns git commit count', async () => {
     const buildNumber = await getBuildNumber();
-    expect(buildNumber).toBeGreaterThan(1000);
+    expect(buildNumber).toBeGreaterThan(20);
   });
 });

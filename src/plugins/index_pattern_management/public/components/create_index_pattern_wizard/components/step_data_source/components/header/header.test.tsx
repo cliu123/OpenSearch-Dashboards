@@ -89,11 +89,44 @@ describe('Header', () => {
           checked: true,
         },
       });
-
     expect(
       component
         .find('[data-test-subj="createIndexPatternStepDataSourceNextStepButton"]')
         .prop('isDisabled')
     ).toEqual(false);
+  });
+
+  it('should not have radio button to choose the default data source', () => {
+    const component = shallowWithIntl(
+      <Header
+        onDataSourceSelected={() => {}}
+        dataSourceRef={{ type: 'type', id: 'id', title: 'title' }!}
+        goToNextStep={() => {}}
+        isNextStepDisabled={true}
+        stepInfo={{ totalStepNumber: 0, currentStepNumber: 0 }}
+        defaultCluster={false}
+      />
+    );
+
+    expect(
+      component.find('[data-test-subj="createIndexPatternStepDataSourceUseDefaultRadio"]').exists()
+    ).toEqual(false);
+  });
+
+  it('should have a selectable list contains the list of data source', () => {
+    const component = shallowWithIntl(
+      <Header
+        onDataSourceSelected={() => {}}
+        dataSourceRef={{ type: 'type', id: 'id', title: 'title' }!}
+        goToNextStep={() => {}}
+        isNextStepDisabled={true}
+        stepInfo={{ totalStepNumber: 0, currentStepNumber: 0 }}
+        defaultCluster={false}
+      />
+    );
+
+    expect(
+      component.find('[data-test-subj="createIndexPatternStepDataSourceSelectDataSource"]').exists()
+    ).toEqual(true);
   });
 });

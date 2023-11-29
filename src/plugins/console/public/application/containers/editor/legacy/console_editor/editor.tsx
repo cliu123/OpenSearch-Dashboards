@@ -54,6 +54,7 @@ const { useUIAceKeyboardMode } = ace;
 export interface EditorProps {
   initialTextValue: string;
   dataSourceId?: string;
+  defaultCluster?: boolean;
 }
 
 interface QueryParams {
@@ -77,7 +78,7 @@ const DEFAULT_INPUT_VALUE = `GET _search
 
 const inputId = 'ConAppInputTextarea';
 
-function EditorUI({ initialTextValue, dataSourceId }: EditorProps) {
+function EditorUI({ initialTextValue, dataSourceId, defaultCluster = true }: EditorProps) {
   const {
     services: { history, notifications, settings: settingsService, opensearchHostService, http },
     docLinkVersion,
@@ -211,6 +212,7 @@ function EditorUI({ initialTextValue, dataSourceId }: EditorProps) {
     settingsService,
     http,
     dataSourceId,
+    defaultCluster,
   ]);
 
   useEffect(() => {
@@ -228,6 +230,9 @@ function EditorUI({ initialTextValue, dataSourceId }: EditorProps) {
     });
   }, [sendCurrentRequestToOpenSearch, openDocumentation]);
 
+  const sendRequestTooltip =
+    dataSourceId !== undefined || defaultCluster ? 'Click to send request' : 'Select data source';
+
   return (
     <div style={abs} className="conApp">
       <div className="conApp__editor">
@@ -241,16 +246,17 @@ function EditorUI({ initialTextValue, dataSourceId }: EditorProps) {
           <EuiFlexItem>
             <EuiToolTip
               content={i18n.translate('console.sendRequestButtonTooltip', {
-                defaultMessage: 'Click to send request',
+                defaultMessage: sendRequestTooltip,
               })}
             >
               <button
                 onClick={sendCurrentRequestToOpenSearch}
                 data-test-subj="sendRequestButton"
                 aria-label={i18n.translate('console.sendRequestButtonTooltip', {
-                  defaultMessage: 'Click to send request',
+                  defaultMessage: sendRequestTooltip,
                 })}
                 className="conApp__editorActionButton conApp__editorActionButton--success"
+                disabled={dataSourceId === undefined && !defaultCluster}
               >
                 <EuiIcon type="play" />
               </button>

@@ -55,15 +55,20 @@ import { Editor } from './editor';
 
 describe('Legacy (Ace) Console Editor Component Smoke Test', () => {
   let mockedAppContextValue: ContextValue;
+
   const sandbox = sinon.createSandbox();
 
-  const doMount = () =>
+  const doMount = (defaultCluster = true, dataSourceId = undefined) =>
     mount(
       <I18nProvider>
         <ServicesContextProvider value={mockedAppContextValue}>
           <RequestContextProvider>
             <EditorContextProvider settings={{} as any}>
-              <Editor initialTextValue="" />
+              <Editor
+                initialTextValue=""
+                defaultCluster={defaultCluster}
+                dataSourceId={dataSourceId}
+              />
             </EditorContextProvider>
           </RequestContextProvider>
         </ServicesContextProvider>
@@ -89,6 +94,30 @@ describe('Legacy (Ace) Console Editor Component Smoke Test', () => {
     });
     await nextTick();
     expect(sendRequestToOpenSearch).toBeCalledTimes(1);
+  });
+
+  it('disables the button when defaultCluster is false and dataSourceId is undefined', () => {
+    const editor = doMount(false);
+    const button = editor.find('[data-test-subj~="sendRequestButton"]');
+    expect(button.props().disabled).toBe(true);
+  });
+
+  it('does not disable the button when defaultCluster is true and dataSourceId is undefined', () => {
+    const editor = doMount(true);
+    const button = editor.find('[data-test-subj~="sendRequestButton"]');
+    expect(button.props().disabled).toBe(false);
+  });
+
+  it('does not disable the button when defaultCluster is false and dataSourceId is provided', () => {
+    const editor = doMount(false, '123');
+    const button = editor.find('[data-test-subj~="sendRequestButton"]');
+    expect(button.props().disabled).toBe(false);
+  });
+
+  it('does not disable the button when defaultCluster is true and dataSourceId is provided', () => {
+    const editor = doMount(true, '123');
+    const button = editor.find('[data-test-subj~="sendRequestButton"]');
+    expect(button.props().disabled).toBe(false);
   });
 
   it('opens docs', () => {

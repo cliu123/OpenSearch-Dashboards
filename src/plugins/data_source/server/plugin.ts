@@ -54,6 +54,7 @@ export class DataSourcePlugin implements Plugin<DataSourcePluginSetup, DataSourc
 
     const capabilitiesProvider = () => ({
       dataSource: {
+        defaultCluster: config.defaultCluster,
         allowedAuthTypes: {
           showNoAuth: config.authTypes.NoAuthentication.enabled,
           showUsernamePasswordAuth: config.authTypes.UsernamePassword.enabled,

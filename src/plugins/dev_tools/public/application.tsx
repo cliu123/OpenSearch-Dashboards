@@ -65,6 +65,7 @@ interface DevToolsWrapperProps {
   savedObjects: SavedObjectsStart;
   notifications: NotificationsStart;
   dataSourceEnabled: boolean;
+  defaultCluster: boolean;
 }
 
 interface MountedDevToolDescriptor {
@@ -85,11 +86,11 @@ function DevToolsWrapper({
   savedObjects,
   notifications: { toasts },
   dataSourceEnabled,
+  defaultCluster,
 }: DevToolsWrapperProps) {
   const mountedTool = useRef<MountedDevToolDescriptor | null>(null);
   const [dataSources, setDataSources] = useState<DataSourceOption[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<DataSourceOption[]>([]);
-
   useEffect(
     () => () => {
       if (mountedTool.current) {
@@ -104,14 +105,24 @@ function DevToolsWrapper({
   });
 
   const fetchDataSources = () => {
+    let dataSourceOptions;
+
     getDataSources(savedObjects.client)
-      .then((fetchedDataSources) => {
-        if (fetchedDataSources?.length) {
-          const dataSourceOptions = fetchedDataSources.map((dataSource) => ({
-            id: dataSource.id,
-            label: dataSource.title,
-          }));
+      .then(async (fetchedDataSources) => {
+        dataSourceOptions = fetchedDataSources.map((dataSource) => ({
+          id: dataSource.id,
+          label: dataSource.title,
+        }));
+
+        if (defaultCluster) {
+          dataSourceOptions.push({ id: '', label: 'Local Cluster' });
+        }
+        if (dataSourceOptions.length > 0) {
           setDataSources(dataSourceOptions);
+
+          setSelectedOptions([dataSourceOptions[0]]);
+          // Mounting devTools app params to be used on console side in the initial rendering of devTools page
+          await remount(mountedTool.current!.mountpoint, dataSourceOptions[0].id);
         }
       })
       .catch(() => {
@@ -289,6 +300,7 @@ export function renderApp(
                     savedObjects={savedObjects}
                     notifications={notifications}
                     dataSourceEnabled={dataSourceEnabled}
+                    defaultCluster={application.capabilities.dataSource.defaultCluster}
                   />
                 )}
               />

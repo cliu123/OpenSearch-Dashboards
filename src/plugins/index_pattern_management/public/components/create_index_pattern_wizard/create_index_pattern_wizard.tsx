@@ -77,6 +77,7 @@ interface CreateIndexPatternWizardState {
   selectedTimeField?: string;
   docLinks: DocLinksStart;
   dataSourceRef?: DataSourceRef;
+  defaultCluster: boolean;
 }
 
 export class CreateIndexPatternWizard extends Component<
@@ -291,7 +292,13 @@ export class CreateIndexPatternWizard extends Component<
         <EuiPageContent>
           {header}
           <EuiHorizontalRule />
-          <StepDataSource goToNextStep={this.goToNextFromDataSource} stepInfo={stepInfo} />
+          <StepDataSource
+            goToNextStep={this.goToNextFromDataSource}
+            stepInfo={stepInfo}
+            defaultCluster={
+              this.context.services.application.capabilities.dataSource.defaultCluster
+            }
+          />
         </EuiPageContent>
       );
     }
