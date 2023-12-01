@@ -1,0 +1,19 @@
+diff --git a/config/opensearch_dashboards.yml b/config/opensearch_dashboards.yml
+index 45868c9571..b49065c156 100644
+--- a/config/opensearch_dashboards.yml
++++ b/config/opensearch_dashboards.yml
+@@ -282,4 +282,11 @@ data_source.authTypes:
+ dynamoDBStorage.enabled: true
+ 
+ # Skip Kibana migrations
+-migrations.skip: true
+\ No newline at end of file
++migrations.skip: true
++
++# Config content-security-policy directives
++csp.rules: ["base-uri 'none'","connect-src 'self'","default-src 'none'","font-src 'self'","frame-ancestors 'none'","img-src data: 'self'","object-src 'none'","script-src 'unsafe-eval' 'self'","style-src 'unsafe-inline' 'self'","worker-src blob: 'self'"]
++
++vis_type_timeline.enabled: false
++vis_type_vega.enabled: false
++vis_type_timeseries.enabled: false
+\ No newline at end of file

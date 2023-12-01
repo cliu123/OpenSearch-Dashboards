@@ -30,6 +30,10 @@ export class OpenSearchClientPool {
   //   key: endpoint + dataSourceId + lastUpdatedTime together to support update case.
   //   value: OpenSearch client | Legacy client
   private awsClientCache?: LRUCache<string, Client | LegacyClient>;
+  // LRU cache of Neo aws clients
+  //   key: endpoint + dataSourceId + IdcUserId + ApplicationId + lastUpdatedTime together to support update case.
+  //   value: OpenSearch client | Legacy client
+  private neoAWSClientCache?: LRUCache<string, Client | LegacyClient>;
   private isClosed = false;
 
   constructor(private logger: Logger) {}
@@ -73,17 +77,45 @@ export class OpenSearchClientPool {
     });
     this.logger.info(`Created data source aws client pool of size ${size}`);
 
-    const getClientFromPool = (key: string, authType: AuthType) => {
-      const selectedCache = authType === AuthType.SigV4 ? this.awsClientCache : this.clientCache;
+    // aws client specific pool
+    this.neoAWSClientCache = new LRUCache({
+      max: size,
+      maxAge: MAX_AGE,
 
+      async dispose(key, client) {
+        try {
+          await client.close();
+        } catch (error: any) {
+          logger.warn(
+            `Error closing OpenSearch client when removing from neo aws client pool: ${error.message}`
+          );
+        }
+      },
+    });
+    this.logger.info(`Created data source neo aws client pool of size ${size}`);
+
+    const getClientFromPool = (key: string, authType: AuthType) => {
+      const selectedCache = getSelectedCache(authType);
       return selectedCache!.get(key);
     };
 
     const addClientToPool = (key: string, authType: string, client: Client | LegacyClient) => {
-      const selectedCache = authType === AuthType.SigV4 ? this.awsClientCache : this.clientCache;
+      const selectedCache = getSelectedCache(authType);
       if (!selectedCache?.has(key)) {
         return selectedCache!.set(key, client);
       }
+    };
+
+    const getSelectedCache = (authType: string) => {
+      let selectedCache;
+      if (authType === AuthType.SigV4) {
+        selectedCache = this.awsClientCache;
+      } else if (authType === AuthType.TokenExchange) {
+        selectedCache = this.neoAWSClientCache;
+      } else {
+        selectedCache = this.clientCache;
+      }
+      return selectedCache;
     };
 
     return {

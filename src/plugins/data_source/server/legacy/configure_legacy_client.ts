@@ -7,19 +7,26 @@ import { Client } from '@opensearch-project/opensearch-next';
 import { Client as LegacyClient, ConfigOptions } from 'elasticsearch';
 import { Credentials, Config } from 'aws-sdk';
 import { get } from 'lodash';
-import HttpAmazonESConnector from 'http-aws-es';
+import HttpAmazonESConnector from './http-aws-es/connector';
 import {
   Headers,
   LegacyAPICaller,
   LegacyCallAPIOptions,
   LegacyOpenSearchErrorHelpers,
   Logger,
+  OpenSearchDashboardsRequest,
 } from '../../../../../src/core/server';
 import {
   AuthType,
   DataSourceAttributes,
   SigV4Content,
   UsernamePasswordTypedContent,
+  TokenExchangeContent,
+  AOSD_HEADER_ACCESS_KEY,
+  AOSD_HEADER_SECRET_KEY,
+  AOSD_HEADER_SESSION_TOKEN,
+  AOSD_HEADER_REGION,
+  AOSD_HEADER_SERVICE,
 } from '../../common/data_sources';
 import { DataSourcePluginConfigType } from '../../config';
 import { CryptographyServiceSetup } from '../cryptography_service';
@@ -34,9 +41,10 @@ import {
   getDataSource,
   generateCacheKey,
 } from '../client/configure_client_utils';
+import { NeoUserInfo, buildNeoUserInfo, getCredentials } from '../client/neo_credential_provider';
 
 export const configureLegacyClient = async (
-  { dataSourceId, savedObjects, cryptography }: DataSourceClientParams,
+  { dataSourceId, savedObjects, cryptography, request }: DataSourceClientParams,
   callApiParams: LegacyClientCallAPIParams,
   openSearchClientPoolSetup: OpenSearchClientPoolSetup,
   config: DataSourcePluginConfigType,
@@ -47,7 +55,8 @@ export const configureLegacyClient = async (
     const rootClient = getRootClient(
       dataSourceAttr,
       openSearchClientPoolSetup.getClientFromPool,
-      dataSourceId
+      dataSourceId,
+      request
     ) as LegacyClient;
 
     return await getQueryClient(
@@ -56,6 +65,7 @@ export const configureLegacyClient = async (
       callApiParams,
       openSearchClientPoolSetup.addClientToPool,
       config,
+      request,
       rootClient,
       dataSourceId
     );
@@ -85,6 +95,7 @@ const getQueryClient = async (
   { endpoint, clientParams, options }: LegacyClientCallAPIParams,
   addClientToPool: (endpoint: string, authType: AuthType, client: Client | LegacyClient) => void,
   config: DataSourcePluginConfigType,
+  request: OpenSearchDashboardsRequest,
   rootClient?: LegacyClient,
   dataSourceId?: string
 ) => {
@@ -93,11 +104,12 @@ const getQueryClient = async (
     endpoint: nodeUrl,
   } = dataSourceAttr;
   const clientOptions = parseClientOptions(config, nodeUrl);
-  const cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
+  let cacheKey;
 
   switch (type) {
     case AuthType.NoAuth:
       if (!rootClient) rootClient = new LegacyClient(clientOptions);
+      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
       addClientToPool(cacheKey, type, rootClient);
 
       return await (callAPI.bind(null, rootClient) as LegacyAPICaller)(
@@ -110,6 +122,7 @@ const getQueryClient = async (
       const credential = await getCredential(dataSourceAttr, cryptography);
 
       if (!rootClient) rootClient = new LegacyClient(clientOptions);
+      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
       addClientToPool(cacheKey, type, rootClient);
 
       return getBasicAuthClient(rootClient, { endpoint, clientParams, options }, credential);
@@ -118,6 +131,7 @@ const getQueryClient = async (
       const awsCredential = await getAWSCredential(dataSourceAttr, cryptography);
 
       const awsClient = rootClient ? rootClient : getAWSClient(awsCredential, clientOptions);
+      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
       addClientToPool(cacheKey, type, awsClient);
 
       return await (callAPI.bind(null, awsClient) as LegacyAPICaller)(
@@ -125,6 +139,30 @@ const getQueryClient = async (
         clientParams,
         options
       );
+
+    case AuthType.TokenExchange:
+      if (!dataSourceAttr.auth.credentials) {
+        throw Error(`Credentials not found.`);
+      }
+
+      const tokenExchangeCredentials = dataSourceAttr.auth.credentials as TokenExchangeContent;
+      const { region, roleARN } = tokenExchangeCredentials;
+      const neoUserInfo: NeoUserInfo = buildNeoUserInfo(request);
+
+      const credentials = await getCredentials(neoUserInfo, roleARN, region);
+
+      if (!rootClient) {
+        rootClient = getAWSClient(credentials, clientOptions);
+        cacheKey = generateCacheKey(
+          dataSourceAttr,
+          dataSourceId,
+          neoUserInfo.userName,
+          neoUserInfo.applicationId
+        );
+        addClientToPool(cacheKey, type, rootClient);
+      }
+
+      return getAWSSigV4Client(rootClient, { endpoint, clientParams, options }, credentials);
 
     default:
       throw Error(`${type} is not a supported auth type for data source`);
@@ -164,7 +202,7 @@ const callAPI = async (
       }
       return request.then(resolve, reject);
     });
-  } catch (err) {
+  } catch (err: any) {
     if (!options.wrap401Errors || err.statusCode !== 401) {
       throw err;
     }
@@ -193,13 +231,33 @@ const getBasicAuthClient = async (
   return await (callAPI.bind(null, rootClient) as LegacyAPICaller)(endpoint, clientParams, options);
 };
 
+const getAWSSigV4Client = async (
+  rootClient: LegacyClient,
+  { endpoint, clientParams = {}, options }: LegacyClientCallAPIParams,
+  credential: SigV4Content
+) => {
+  const { accessKey, secretKey, region, sessionToken } = credential;
+  const headers: Headers = {
+    [AOSD_HEADER_ACCESS_KEY]: accessKey,
+    [AOSD_HEADER_SECRET_KEY]: secretKey,
+    [AOSD_HEADER_SESSION_TOKEN]: sessionToken,
+    [AOSD_HEADER_REGION]: region,
+    [AOSD_HEADER_SERVICE]: 'es',
+  };
+  clientParams.headers = Object.assign({}, clientParams.headers, headers);
+
+  return await (callAPI.bind(null, rootClient) as LegacyAPICaller)(endpoint, clientParams, options);
+};
+
 const getAWSClient = (credential: SigV4Content, clientOptions: ConfigOptions): LegacyClient => {
-  const { accessKey, secretKey, region, service } = credential;
+  const { accessKey, secretKey, region, sessionToken, service } = credential;
   const client = new LegacyClient({
     connectionClass: HttpAmazonESConnector,
     awsConfig: new Config({
       region,
-      credentials: new Credentials({ accessKeyId: accessKey, secretAccessKey: secretKey }),
+      credentials: sessionToken
+        ? new Credentials({ accessKeyId: accessKey, secretAccessKey: secretKey, sessionToken })
+        : new Credentials({ accessKeyId: accessKey, secretAccessKey: secretKey }),
     }),
     service,
     ...clientOptions,

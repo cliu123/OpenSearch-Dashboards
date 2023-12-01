@@ -11,7 +11,7 @@ export interface DataSourceAttributes extends SavedObjectAttributes {
   endpoint: string;
   auth: {
     type: AuthType;
-    credentials: UsernamePasswordTypedContent | SigV4Content | undefined;
+    credentials: UsernamePasswordTypedContent | SigV4Content | TokenExchangeContent | undefined;
   };
   lastUpdatedTime?: string;
 }
@@ -26,6 +26,7 @@ export interface SigV4Content extends SavedObjectAttributes {
   secretKey: string;
   region: string;
   service?: SigV4ServiceName;
+  sessionToken?: string;
 }
 
 export interface UsernamePasswordTypedContent extends SavedObjectAttributes {
@@ -33,10 +34,16 @@ export interface UsernamePasswordTypedContent extends SavedObjectAttributes {
   password: string;
 }
 
+export interface TokenExchangeContent extends SavedObjectAttributes {
+  region: string;
+  roleARN: string;
+}
+
 export enum AuthType {
   NoAuth = 'no_auth',
   UsernamePasswordType = 'username_password',
   SigV4 = 'sigv4',
+  TokenExchange = 'token_exchange',
 }
 
 export enum SigV4ServiceName {

@@ -7,7 +7,12 @@ import { i18n } from '@osd/i18n';
 import { isValidUrl } from '../utils';
 import { CreateDataSourceState } from '../create_data_source_wizard/components/create_form/create_data_source_form';
 import { EditDataSourceState } from '../edit_data_source/components/edit_form/edit_data_source_form';
-import { AuthType } from '../../types';
+import {
+  AuthType,
+  SigV4Content,
+  TokenExchangeContent,
+  UsernamePasswordTypedContent,
+} from '../../types';
 
 export interface CreateEditDataSourceValidation {
   title: string[];
@@ -21,6 +26,10 @@ export interface CreateEditDataSourceValidation {
     accessKey: string[];
     secretKey: string[];
     service: string[];
+  };
+  tokenExchangeCredentials: {
+    roleArn: string[];
+    region: string[];
   };
 }
 
@@ -37,6 +46,44 @@ export const defaultValidation: CreateEditDataSourceValidation = {
     secretKey: [],
     service: [],
   },
+  tokenExchangeCredentials: {
+    roleArn: [],
+    region: [],
+  },
+};
+
+export const getDefaultAuthType = (allowedAuthTypes: Record<string, boolean>) => {
+  if (allowedAuthTypes.showUsernamePasswordAuth) {
+    return {
+      type: AuthType.UsernamePasswordType,
+      credentials: {
+        username: '',
+        password: '',
+      } as UsernamePasswordTypedContent,
+    };
+  } else if (allowedAuthTypes.showAWSSigv4) {
+    return {
+      type: AuthType.SigV4,
+      credentials: {
+        region: '',
+        accessKey: '',
+        secretKey: '',
+      } as SigV4Content,
+    };
+  } else if (allowedAuthTypes.showTokenExchange) {
+    return {
+      type: AuthType.TokenExchange,
+      credentials: {
+        region: '',
+        roleARN: '',
+      } as TokenExchangeContent,
+    };
+  } else {
+    return {
+      type: AuthType.NoAuth,
+      credentials: undefined,
+    };
+  }
 };
 
 export const isTitleValid = (
@@ -115,6 +162,19 @@ export const performDataSourceFormValidation = (
 
     /* Service Name */
     if (!formValues.auth.credentials?.service) {
+      return false;
+    }
+  }
+
+  /* AWS Token Exchange Content */
+  if (formValues?.auth?.type === AuthType.TokenExchange) {
+    /* IAM role arn */
+    if (!formValues.auth.credentials?.roleARN) {
+      return false;
+    }
+
+    /* Region */
+    if (!formValues.auth.credentials?.region) {
       return false;
     }
   }

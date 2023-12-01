@@ -8,6 +8,7 @@ import { DataSourcePluginConfigType } from '../config';
 import { DataSourceService } from './data_source_service';
 
 const logger = loggingSystemMock.create();
+jest.mock('./client/neo_credential_provider');
 
 describe('Data Source Service', () => {
   let service: DataSourceService;

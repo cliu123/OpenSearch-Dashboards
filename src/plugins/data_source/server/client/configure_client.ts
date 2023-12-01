@@ -7,12 +7,18 @@ import { Client, ClientOptions } from '@opensearch-project/opensearch-next';
 import { Client as LegacyClient } from 'elasticsearch';
 import { Credentials } from 'aws-sdk';
 import { AwsSigv4Signer } from '@opensearch-project/opensearch-next/aws';
-import { Logger } from '../../../../../src/core/server';
+import { Logger, OpenSearchDashboardsRequest } from '../../../../../src/core/server';
 import {
   AuthType,
   DataSourceAttributes,
+  TokenExchangeContent,
   SigV4Content,
   UsernamePasswordTypedContent,
+  AOSD_HEADER_ACCESS_KEY,
+  AOSD_HEADER_SECRET_KEY,
+  AOSD_HEADER_SESSION_TOKEN,
+  AOSD_HEADER_REGION,
+  AOSD_HEADER_SERVICE,
 } from '../../common/data_sources';
 import { DataSourcePluginConfigType } from '../../config';
 import { CryptographyServiceSetup } from '../cryptography_service';
@@ -27,9 +33,17 @@ import {
   getDataSource,
   generateCacheKey,
 } from './configure_client_utils';
+import { NeoUserInfo, buildNeoUserInfo, getCredentials } from './neo_credential_provider';
+import { AwsSigv4SignerConnection } from '../aws/aws_sigv4_signer';
 
 export const configureClient = async (
-  { dataSourceId, savedObjects, cryptography, testClientDataSourceAttr }: DataSourceClientParams,
+  {
+    dataSourceId,
+    savedObjects,
+    cryptography,
+    testClientDataSourceAttr,
+    request,
+  }: DataSourceClientParams,
   openSearchClientPoolSetup: OpenSearchClientPoolSetup,
   config: DataSourcePluginConfigType,
   logger: Logger
@@ -61,13 +75,15 @@ export const configureClient = async (
     const rootClient = getRootClient(
       dataSource,
       openSearchClientPoolSetup.getClientFromPool,
-      dataSourceId
+      dataSourceId,
+      request
     ) as Client;
 
     return await getQueryClient(
       dataSource,
       openSearchClientPoolSetup.addClientToPool,
       config,
+      request,
       cryptography,
       rootClient,
       dataSourceId,
@@ -98,6 +114,7 @@ const getQueryClient = async (
   dataSourceAttr: DataSourceAttributes,
   addClientToPool: (endpoint: string, authType: AuthType, client: Client | LegacyClient) => void,
   config: DataSourcePluginConfigType,
+  request: OpenSearchDashboardsRequest,
   cryptography?: CryptographyServiceSetup,
   rootClient?: Client,
   dataSourceId?: string,
@@ -108,11 +125,13 @@ const getQueryClient = async (
     endpoint,
   } = dataSourceAttr;
   const clientOptions = parseClientOptions(config, endpoint);
-  const cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
+  let cacheKey;
 
   switch (type) {
     case AuthType.NoAuth:
       if (!rootClient) rootClient = new Client(clientOptions);
+
+      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
       addClientToPool(cacheKey, type, rootClient);
 
       return rootClient.child();
@@ -123,6 +142,8 @@ const getQueryClient = async (
         : (dataSourceAttr.auth.credentials as UsernamePasswordTypedContent);
 
       if (!rootClient) rootClient = new Client(clientOptions);
+
+      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
       addClientToPool(cacheKey, type, rootClient);
 
       return getBasicAuthClient(rootClient, credential);
@@ -133,13 +154,57 @@ const getQueryClient = async (
         : (dataSourceAttr.auth.credentials as SigV4Content);
 
       const awsClient = rootClient ? rootClient : getAWSClient(awsCredential, clientOptions);
+
+      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
       addClientToPool(cacheKey, type, awsClient);
 
       return awsClient;
 
+    case AuthType.TokenExchange:
+      if (!dataSourceAttr.auth.credentials) {
+        throw Error(`Credentials not found.`);
+      }
+
+      const tokenExchangeCredentials = dataSourceAttr.auth.credentials as TokenExchangeContent;
+      const { region, roleARN } = tokenExchangeCredentials;
+      const neoUserInfo: NeoUserInfo = buildNeoUserInfo(request);
+
+      const credentials = await getCredentials(neoUserInfo, roleARN, region);
+
+      if (!rootClient) {
+        rootClient = new Client({
+          Connection: AwsSigv4SignerConnection,
+          ...clientOptions,
+        });
+
+        cacheKey = generateCacheKey(
+          dataSourceAttr,
+          dataSourceId,
+          neoUserInfo.userName,
+          neoUserInfo.applicationId
+        );
+        addClientToPool(cacheKey, type, rootClient);
+      }
+
+      const awsOpenSearchClient = getAWSSigV4Client(rootClient, credentials);
+      return awsOpenSearchClient;
+
     default:
       throw Error(`${type} is not a supported auth type for data source`);
   }
+};
+
+const getAWSSigV4Client = (rootClient: Client, credential: SigV4Content): Client => {
+  const { accessKey, secretKey, region, sessionToken } = credential;
+  return rootClient.child({
+    headers: {
+      [AOSD_HEADER_ACCESS_KEY]: accessKey,
+      [AOSD_HEADER_SECRET_KEY]: secretKey,
+      [AOSD_HEADER_SESSION_TOKEN]: sessionToken,
+      [AOSD_HEADER_REGION]: region,
+      [AOSD_HEADER_SERVICE]: 'es',
+    },
+  });
 };
 
 const getBasicAuthClient = (

@@ -33,6 +33,7 @@ import {
   sigV4ServiceOptions,
   ToastMessageItem,
   UsernamePasswordTypedContent,
+  TokenExchangeContent,
 } from '../../../../types';
 import { context as contextType } from '../../../../../../opensearch_dashboards_react/public';
 import {
@@ -51,6 +52,7 @@ export interface EditDataSourceProps {
   handleTestConnection: (formValues: DataSourceAttributes) => Promise<void>;
   onDeleteDataSource?: () => Promise<void>;
   displayToastMessage: (info: ToastMessageItem) => void;
+  allowedAuthTypes: Record<string, boolean>;
 }
 export interface EditDataSourceState {
   formErrorsByField: CreateEditDataSourceValidation;
@@ -59,7 +61,7 @@ export interface EditDataSourceState {
   endpoint: string;
   auth: {
     type: AuthType;
-    credentials: UsernamePasswordTypedContent | SigV4Content;
+    credentials: UsernamePasswordTypedContent | SigV4Content | TokenExchangeContent | undefined;
   };
   showUpdatePasswordModal: boolean;
   showUpdateAwsCredentialModal: boolean;
@@ -88,6 +90,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
           region: '',
           accessKey: '',
           secretKey: '',
+          roleARN: '',
         },
       },
       showUpdatePasswordModal: false,
@@ -113,6 +116,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
       const authTypeCheckResults = {
         isUserNamePassword: auth.type === AuthType.UsernamePasswordType,
         isSigV4: auth.type === AuthType.SigV4,
+        isTokenExchange: auth.type === AuthType.TokenExchange,
       };
 
       this.setState({
@@ -127,9 +131,13 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
             service: authTypeCheckResults.isSigV4
               ? auth.credentials?.service || SigV4ServiceName.OpenSearch
               : '',
-            region: authTypeCheckResults.isSigV4 ? auth.credentials!.region : '',
+            region:
+              authTypeCheckResults.isSigV4 || authTypeCheckResults.isTokenExchange
+                ? auth.credentials!.region
+                : '',
             accessKey: authTypeCheckResults.isSigV4 ? this.maskedPassword : '',
             secretKey: authTypeCheckResults.isSigV4 ? this.maskedPassword : '',
+            roleARN: authTypeCheckResults.isTokenExchange ? auth.credentials?.roleARN : '',
           },
         },
       });
@@ -319,6 +327,56 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
     });
   };
 
+  onChangeOpenSearchRegion = (e: { target: { value: any } }) => {
+    this.setState({
+      auth: {
+        ...this.state.auth,
+        credentials: {
+          ...this.state.auth.credentials,
+          region: e.target.value,
+        } as TokenExchangeContent,
+      },
+    });
+  };
+
+  validateOpenSearchRegion = () => {
+    const isValid = !!this.state.auth.credentials.region?.trim().length;
+    this.setState({
+      formErrorsByField: {
+        ...this.state.formErrorsByField,
+        tokenExchangeCredentials: {
+          ...this.state.formErrorsByField.tokenExchangeCredentials,
+          region: isValid ? [] : [''],
+        },
+      },
+    });
+  };
+
+  onChangeRoleArn = (e: { target: { value: any } }) => {
+    this.setState({
+      auth: {
+        ...this.state.auth,
+        credentials: {
+          ...this.state.auth.credentials,
+          roleARN: e.target.value,
+        } as TokenExchangeContent,
+      },
+    });
+  };
+
+  validateRoleArn = () => {
+    const isValid = !!this.state.auth.credentials?.roleARN;
+    this.setState({
+      formErrorsByField: {
+        ...this.state.formErrorsByField,
+        tokenExchangeCredentials: {
+          ...this.state.formErrorsByField.tokenExchangeCredentials,
+          roleArn: isValid ? [] : [''],
+        },
+      },
+    });
+  };
+
   onClickUpdateDataSource = async () => {
     if (this.isFormValid()) {
       // update data source endpoint is currently not supported/allowed
@@ -335,6 +393,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
         case AuthType.SigV4:
           delete formValues.auth.credentials?.username;
           delete formValues.auth.credentials?.password;
+          delete formValues.auth.credentials?.roleARN;
           /* Remove access key and secret key if previously & currently SigV4 auth method is selected*/
           if (this.props.existingDataSource.auth.type === this.state.auth.type) {
             delete formValues.auth.credentials?.accessKey;
@@ -345,10 +404,16 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
           delete formValues.auth.credentials?.accessKey;
           delete formValues.auth.credentials?.secretKey;
           delete formValues.auth.credentials?.region;
+          delete formValues.auth.credentials?.roleARN;
           /* Remove password if previously & currently username & password auth method is selected*/
           if (this.props.existingDataSource.auth.type === this.state.auth.type)
             delete formValues.auth.credentials?.password;
           break;
+        case AuthType.TokenExchange:
+          delete formValues.auth.credentials?.username;
+          delete formValues.auth.credentials?.password;
+          delete formValues.auth.credentials?.accessKey;
+          delete formValues.auth.credentials?.secretKey;
         default:
           break;
       }
@@ -396,6 +461,12 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
           accessKey: isNewCredential ? this.state.auth.credentials?.accessKey : '',
           secretKey: isNewCredential ? this.state.auth.credentials?.secretKey : '',
         } as SigV4Content;
+        break;
+      case AuthType.TokenExchange:
+        credentials = {
+          region: this.state.auth.credentials?.region,
+          roleARN: this.state.auth.credentials?.roleARN,
+        } as TokenExchangeContent;
         break;
       case AuthType.NoAuth:
         credentials = undefined;
@@ -773,7 +844,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
           })}
         >
           <EuiSelect
-            options={credentialSourceOptions}
+            options={credentialSourceOptions(this.props.allowedAuthTypes)}
             value={this.state.auth.type}
             onChange={this.onChangeAuthType}
             name="Credential"
@@ -793,6 +864,8 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
         return this.renderUsernamePasswordFields();
       case AuthType.SigV4:
         return this.renderSigV4ContentFields();
+      case AuthType.TokenExchange:
+        return this.renderTokenExchangeContentFields();
       default:
         return null;
     }
@@ -964,6 +1037,55 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
     );
   };
 
+  renderTokenExchangeContentFields = () => {
+    return (
+      <>
+        <EuiFormRow
+          label={i18n.translate('dataSourcesManagement.createDataSource.region', {
+            defaultMessage: 'Region',
+          })}
+          isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.region.length}
+          error={this.state.formErrorsByField.tokenExchangeCredentials.region}
+        >
+          <EuiFieldText
+            placeholder={i18n.translate(
+              'dataSourcesManagement.createDataSource.regionPlaceholder',
+              {
+                defaultMessage: 'AWS Region, e.g. us-west-2',
+              }
+            )}
+            isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.region.length}
+            value={this.state.auth.credentials?.region || ''}
+            onChange={this.onChangeOpenSearchRegion}
+            onBlur={this.validateOpenSearchRegion}
+            data-test-subj="updateDataSourceFormRegionField"
+          />
+        </EuiFormRow>
+        <EuiFormRow
+          label={i18n.translate('dataSourcesManagement.createDataSource.roleArn', {
+            defaultMessage: 'IAM role ARN',
+          })}
+          isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.roleArn.length}
+          error={this.state.formErrorsByField.tokenExchangeCredentials.roleArn}
+        >
+          <EuiFieldText
+            placeholder={i18n.translate(
+              'dataSourcesManagement.createDataSource.roleArnPlaceholder',
+              {
+                defaultMessage: 'IAM role ARN',
+              }
+            )}
+            isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.roleArn.length}
+            value={this.state.auth.credentials?.roleARN || ''}
+            onChange={this.onChangeRoleArn}
+            onBlur={this.validateRoleArn}
+            data-test-subj="updateDataSourceFormRoleArnField"
+          />
+        </EuiFormRow>
+      </>
+    );
+  };
+
   didFormValuesChange = () => {
     const formValues: DataSourceAttributes = {
       title: this.state.title,
@@ -978,12 +1100,17 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
       auth.type === AuthType.UsernamePasswordType &&
       formValues.auth.credentials?.username !== auth.credentials?.username;
     const isAuthTypeSigV4Unchanged =
-      auth.type === formValues.auth.type && auth.type === AuthType.SigV4;
+      auth.type === formValues.auth.type &&
+      (auth.type === AuthType.SigV4 || auth.type === AuthType.TokenExchange);
     const isRegionChanged =
       isAuthTypeSigV4Unchanged && formValues.auth.credentials?.region !== auth.credentials?.region;
     const isServiceNameChanged =
       isAuthTypeSigV4Unchanged &&
       formValues.auth.credentials?.service !== auth.credentials?.service;
+    const isRoleArnChanged =
+      auth.type === formValues.auth.type &&
+      auth.type === AuthType.TokenExchange &&
+      formValues.auth.credentials?.roleARN !== auth.credentials?.roleARN;
 
     if (
       formValues.title !== title ||
@@ -991,6 +1118,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
       formValues.auth.type !== auth.type ||
       isUsernameChanged ||
       isRegionChanged ||
+      isRoleArnChanged ||
       isServiceNameChanged
     ) {
       this.setState({ showUpdateOptions: true });

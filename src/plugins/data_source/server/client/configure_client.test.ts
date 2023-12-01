@@ -11,6 +11,7 @@ import {
   AuthType,
   UsernamePasswordTypedContent,
   SigV4Content,
+  TokenExchangeContent,
 } from '../../common/data_sources/types';
 import { DataSourcePluginConfigType } from '../../config';
 import { ClientMock, parseClientOptionsMock } from './configure_client.test.mocks';
@@ -25,6 +26,18 @@ import { DataSourceClientParams } from '../types';
 
 const DATA_SOURCE_ID = 'a54b76ec86771ee865a0f74a305dfff8';
 
+jest.mock('./neo_credential_provider', () => ({
+  buildNeoUserInfo: jest
+    .fn()
+    .mockReturnValue({ applicationId: 'test', identityToken: 'test', userName: 'test' }),
+  getCredentials: jest.fn().mockReturnValue({
+    accessKey: 'test',
+    secretKey: 'test',
+    sessionToken: 'test',
+    region: 'us-east-1',
+  }),
+}));
+
 // TODO: improve UT
 describe('configureClient', () => {
   let logger: ReturnType<typeof loggingSystemMock.createLogger>;
@@ -38,6 +51,7 @@ describe('configureClient', () => {
   let dataSourceClientParams: DataSourceClientParams;
   let usernamePasswordAuthContent: UsernamePasswordTypedContent;
   let sigV4AuthContent: SigV4Content;
+  let tokenExchangeContent: TokenExchangeContent;
 
   beforeEach(() => {
     dsClient = opensearchClientMock.createInternalClient();
@@ -68,6 +82,11 @@ describe('configureClient', () => {
       region: 'us-east-1',
       accessKey: 'accessKey',
       secretKey: 'secretKey',
+    };
+
+    tokenExchangeContent = {
+      region: 'us-east-1',
+      roleARN: 'test-role',
     };
 
     dataSourceAttr = {
@@ -237,5 +256,42 @@ describe('configureClient', () => {
     expect(ClientMock).not.toHaveBeenCalled();
     expect(savedObjectsMock.get).toHaveBeenCalledTimes(1);
     expect(decodeAndDecryptSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test('should throw error when no credentials present for token_exchange', async () => {
+    savedObjectsMock.get.mockReset().mockResolvedValueOnce({
+      id: DATA_SOURCE_ID,
+      type: DATA_SOURCE_SAVED_OBJECT_TYPE,
+      attributes: {
+        ...dataSourceAttr,
+        auth: {
+          type: AuthType.TokenExchange,
+        },
+      },
+      references: [],
+    });
+    await expect(
+      configureClient(dataSourceClientParams, clientPoolSetup, config, logger)
+    ).rejects.toThrowError();
+  });
+
+  test('configureClient with auth.type == token_exchange and crdentials should retunrn child client', async () => {
+    savedObjectsMock.get.mockReset().mockResolvedValueOnce({
+      id: DATA_SOURCE_ID,
+      type: DATA_SOURCE_SAVED_OBJECT_TYPE,
+      attributes: {
+        ...dataSourceAttr,
+        auth: {
+          type: AuthType.TokenExchange,
+          credentials: tokenExchangeContent,
+        },
+      },
+      references: [],
+    });
+    const client = await configureClient(dataSourceClientParams, clientPoolSetup, config, logger);
+
+    expect(ClientMock).toHaveBeenCalledTimes(1);
+    expect(savedObjectsMock.get).toHaveBeenCalledTimes(1);
+    expect(client).toBe(dsClient.child.mock.results[0].value);
   });
 });

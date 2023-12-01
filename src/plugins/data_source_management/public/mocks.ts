@@ -21,15 +21,21 @@ export const docLinks = {
   },
 };
 
+export const application = {
+  capabilities: {
+    dataSource: {
+      allowedAuthTypes: {
+        showNoAuth: true,
+        showUsernamePasswordAuth: true,
+        showAWSSigv4: true,
+        showTokenExchange: true,
+      },
+    },
+  },
+};
+
 const createDataSourceManagementContext = () => {
-  const {
-    chrome,
-    application,
-    savedObjects,
-    uiSettings,
-    notifications,
-    overlays,
-  } = coreMock.createStart();
+  const { chrome, savedObjects, uiSettings, notifications, overlays } = coreMock.createStart();
   const { http } = coreMock.createSetup();
 
   return {
@@ -48,6 +54,7 @@ const createDataSourceManagementContext = () => {
 export const mockManagementPlugin = {
   createDataSourceManagementContext,
   docLinks,
+  application,
 };
 
 /* Mock data responses - JSON*/
@@ -155,6 +162,21 @@ export const mockDataSourceAttributesWithNoAuth = {
     credentials: undefined,
   },
 };
+
+export const mockDataSourceAttributesWithTokenExchange = {
+  id: 'test123',
+  title: 'create-test-ds123',
+  description: 'jest testing',
+  endpoint: 'https://test.com',
+  auth: {
+    type: AuthType.TokenExchange,
+    credentials: {
+      region: 'region1',
+      roleARN: 'test-role',
+    },
+  },
+};
+
 export const getDataSourceByIdWithCredential = {
   attributes: {
     id: 'alpha-test',
@@ -196,4 +218,11 @@ export const mockErrorResponseForSavedObjectsCalls = (
   (savedObjectsClient[savedObjectsMethodName] as jest.Mock).mockRejectedValue(
     throwError(new Error('Error while fetching data sources'))
   );
+};
+
+export const mockDefaultAllowedAuthTypes = {
+  showNoAuth: true,
+  showUsernamePasswordAuth: true,
+  showAWSSigv4: true,
+  showTokenExchange: true,
 };

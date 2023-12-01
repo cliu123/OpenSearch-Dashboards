@@ -52,6 +52,18 @@ export class DataSourcePlugin implements Plugin<DataSourcePluginSetup, DataSourc
 
     const config: DataSourcePluginConfigType = await this.config$.pipe(first()).toPromise();
 
+    const capabilitiesProvider = () => ({
+      dataSource: {
+        allowedAuthTypes: {
+          showNoAuth: config.authTypes.NoAuthentication.enabled,
+          showUsernamePasswordAuth: config.authTypes.UsernamePassword.enabled,
+          showAWSSigv4: config.authTypes.AWSSigV4.enabled,
+          showTokenExchange: config.authTypes.TokenExchange.enabled,
+        },
+      },
+    });
+    core.capabilities.registerProvider(capabilitiesProvider);
+
     const cryptographyServiceSetup: CryptographyServiceSetup = this.cryptographyService.setup(
       config
     );
@@ -137,11 +149,11 @@ export class DataSourcePlugin implements Plugin<DataSourcePluginSetup, DataSourc
             const auditor = auditTrailPromise.then((auditTrail) => auditTrail.asScoped(req));
 
             this.logAuditMessage(auditor, dataSourceId, req);
-
             return dataSourceService.getDataSourceClient({
               dataSourceId,
               savedObjects: context.core.savedObjects.client,
               cryptography,
+              request: req,
             });
           },
           legacy: {
@@ -150,6 +162,7 @@ export class DataSourcePlugin implements Plugin<DataSourcePluginSetup, DataSourc
                 dataSourceId,
                 savedObjects: context.core.savedObjects.client,
                 cryptography,
+                request: req,
               });
             },
           },

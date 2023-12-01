@@ -16,6 +16,7 @@ import {
 import { ManagementAppMountParams } from 'src/plugins/management/public';
 import { SavedObjectAttributes } from 'src/core/types';
 import { i18n } from '@osd/i18n';
+import { EuiSelectOption } from '@elastic/eui';
 import { SigV4ServiceName } from '../../data_source/common/data_sources';
 import { OpenSearchDashboardsReactContextValue } from '../../opensearch_dashboards_react/public';
 
@@ -56,28 +57,46 @@ export enum AuthType {
   NoAuth = 'no_auth',
   UsernamePasswordType = 'username_password',
   SigV4 = 'sigv4',
+  TokenExchange = 'token_exchange',
 }
 
-export const credentialSourceOptions = [
-  {
-    value: AuthType.NoAuth,
-    text: i18n.translate('dataSourceManagement.credentialSourceOptions.NoAuthentication', {
-      defaultMessage: 'No authentication',
-    }),
-  },
-  {
-    value: AuthType.UsernamePasswordType,
-    text: i18n.translate('dataSourceManagement.credentialSourceOptions.UsernamePassword', {
-      defaultMessage: 'Username & Password',
-    }),
-  },
-  {
-    value: AuthType.SigV4,
-    text: i18n.translate('dataSourceManagement.credentialSourceOptions.AwsSigV4', {
-      defaultMessage: 'AWS SigV4',
-    }),
-  },
-];
+export const credentialSourceOptions = (allowedAuthTypes: Record<string, boolean>) => {
+  const authenticationMethods = [
+    allowedAuthTypes.showNoAuth
+      ? {
+          value: AuthType.NoAuth,
+          text: i18n.translate('dataSourceManagement.credentialSourceOptions.NoAuthentication', {
+            defaultMessage: 'No authentication',
+          }),
+        }
+      : '',
+    allowedAuthTypes.showUsernamePasswordAuth
+      ? {
+          value: AuthType.UsernamePasswordType,
+          text: i18n.translate('dataSourceManagement.credentialSourceOptions.UsernamePassword', {
+            defaultMessage: 'Username & Password',
+          }),
+        }
+      : '',
+    allowedAuthTypes.showAWSSigv4
+      ? {
+          value: AuthType.SigV4,
+          text: i18n.translate('dataSourceManagement.credentialSourceOptions.AwsSigV4', {
+            defaultMessage: 'AWS SigV4',
+          }),
+        }
+      : '',
+    allowedAuthTypes.showTokenExchange
+      ? {
+          value: AuthType.TokenExchange,
+          text: i18n.translate('dataSourceManagement.credentialSourceOptions.TokenExchange', {
+            defaultMessage: 'AWS Token Exchange',
+          }),
+        }
+      : '',
+  ];
+  return authenticationMethods.filter((item) => item !== '') as EuiSelectOption[];
+};
 
 export const sigV4ServiceOptions = [
   {
@@ -100,7 +119,7 @@ export interface DataSourceAttributes extends SavedObjectAttributes {
   endpoint?: string;
   auth: {
     type: AuthType;
-    credentials: UsernamePasswordTypedContent | SigV4Content | undefined;
+    credentials: UsernamePasswordTypedContent | SigV4Content | TokenExchangeContent | undefined;
   };
 }
 
@@ -114,4 +133,9 @@ export interface SigV4Content extends SavedObjectAttributes {
   secretKey: string;
   region: string;
   service?: SigV4ServiceName;
+}
+
+export interface TokenExchangeContent extends SavedObjectAttributes {
+  region: string;
+  roleARN: string;
 }

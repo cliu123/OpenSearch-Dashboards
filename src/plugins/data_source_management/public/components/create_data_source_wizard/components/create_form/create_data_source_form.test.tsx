@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { mockManagementPlugin } from '../../../../mocks';
+import { mockManagementPlugin, mockDefaultAllowedAuthTypes } from '../../../../mocks';
 import { mount, ReactWrapper } from 'enzyme';
 import { wrapWithIntl } from 'test_utils/enzyme_helpers';
 import { OpenSearchDashboardsContextProvider } from '../../../../../../opensearch_dashboards_react/public';
@@ -19,6 +19,9 @@ const endpointIdentifier = '[data-test-subj="createDataSourceFormEndpointField"]
 const authTypeIdentifier = '[data-test-subj="createDataSourceFormAuthTypeSelect"]';
 const usernameIdentifier = '[data-test-subj="createDataSourceFormUsernameField"]';
 const passwordIdentifier = '[data-test-subj="createDataSourceFormPasswordField"]';
+const regionIdentifier = '[data-test-subj="createDataSourceFormRegionField"]';
+const roleArnIdentifier = '[data-test-subj="createDataSourceFormRoleArnField"]';
+
 const createButtonIdentifier = '[data-test-subj="createDataSourceButton"]';
 const testConnectionButtonIdentifier = '[data-test-subj="createDataSourceTestConnectionButton"]';
 
@@ -68,6 +71,7 @@ describe('Datasource Management: Create Datasource form', () => {
           handleSubmit={mockSubmitHandler}
           handleCancel={mockCancelHandler}
           existingDatasourceNamesList={['dup20']}
+          allowedAuthTypes={mockDefaultAllowedAuthTypes}
         />
       ),
       {
@@ -223,5 +227,51 @@ describe('Datasource Management: Create Datasource form', () => {
     blurOnField(passwordIdentifier);
     // @ts-ignore
     expect(component.find(passwordIdentifier).first().props().isInvalid).toBe(false);
+  });
+
+  test('should create data source with Token Exchange when all fields are valid', () => {
+    /* set form fields */
+    setAuthTypeValue(authTypeIdentifier, AuthType.TokenExchange);
+    changeTextFieldValue(titleIdentifier, 'test');
+    changeTextFieldValue(descriptionIdentifier, 'test');
+    changeTextFieldValue(endpointIdentifier, 'https://test.com');
+    changeTextFieldValue(regionIdentifier, 'region1');
+    changeTextFieldValue(roleArnIdentifier, 'test-role');
+
+    findTestSubject(component, 'createDataSourceTestConnectionButton').simulate('click');
+
+    findTestSubject(component, 'createDataSourceButton').simulate('click');
+    expect(mockTestConnectionHandler).toHaveBeenCalled();
+    expect(mockSubmitHandler).toHaveBeenCalled(); // should call submit as all fields are valid
+  });
+
+  test('should validate region as required field when Token Exchage is selected', () => {
+    setAuthTypeValue(authTypeIdentifier, AuthType.TokenExchange);
+    /* Validate empty region */
+    changeTextFieldValue(regionIdentifier, '');
+    blurOnField(regionIdentifier);
+    // @ts-ignore
+    expect(component.find(regionIdentifier).first().props().isInvalid).toBe(true);
+
+    /* Validate valid region */
+    changeTextFieldValue(regionIdentifier, 'region1');
+    blurOnField(regionIdentifier);
+    // @ts-ignore
+    expect(component.find(regionIdentifier).first().props().isInvalid).toBe(false);
+  });
+
+  test('should validate roleARN as required field when Token Exchage is selected', () => {
+    setAuthTypeValue(authTypeIdentifier, AuthType.TokenExchange);
+    /* Validate empty role arn */
+    changeTextFieldValue(roleArnIdentifier, '');
+    blurOnField(roleArnIdentifier);
+    // @ts-ignore
+    expect(component.find(roleArnIdentifier).first().props().isInvalid).toBe(true);
+
+    /* Validate valid role arn */
+    changeTextFieldValue(roleArnIdentifier, 'test-role');
+    blurOnField(roleArnIdentifier);
+    // @ts-ignore
+    expect(component.find(roleArnIdentifier).first().props().isInvalid).toBe(false);
   });
 });

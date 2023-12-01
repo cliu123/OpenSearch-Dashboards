@@ -1,0 +1,3307 @@
+diff --git a/Config b/Config
+new file mode 100644
+index 0000000000..22523f2b63
+--- /dev/null
++++ b/Config
+@@ -0,0 +1,26 @@
++package.NeoDashboardsComputingEngineService = {
++    interfaces = (1.0);
++
++    # Use NoOpBuild. See https://w.amazon.com/index.php/BrazilBuildSystem/NoOpBuild
++    build-system = no-op;
++    build-tools = {
++        1.0 = {
++            NoOpBuild = 1.0;
++        };
++    };
++
++    # Use runtime-dependencies for when you want to bring in additional
++    # packages when deploying.
++    # Use dependencies instead if you intend for these dependencies to
++    # be exported to other packages that build against you.
++    dependencies = {
++        1.0 = {
++        };
++    };
++
++    runtime-dependencies = {
++        1.0 = {
++        };
++    };
++
++};
+\ No newline at end of file
+diff --git a/config/opensearch_dashboards.yml b/config/opensearch_dashboards.yml
+index e9eea0000a..339d5a94dc 100644
+--- a/config/opensearch_dashboards.yml
++++ b/config/opensearch_dashboards.yml
+@@ -5,6 +5,7 @@
+ # The default is 'localhost', which usually means remote machines will not be able to connect.
+ # To allow connections from remote users, set this parameter to a non-loopback address.
+ #server.host: "localhost"
++server.host: 0.0.0.0
+ 
+ # Enables you to specify a path to mount OpenSearch Dashboards at if you are running behind a proxy.
+ # Use the `server.rewriteBasePath` setting to tell OpenSearch Dashboards if it should remove the basePath
+@@ -24,6 +25,7 @@
+ 
+ # The URLs of the OpenSearch instances to use for all your queries.
+ #opensearch.hosts: ["http://localhost:9200"]
++opensearch.hosts: []
+ 
+ # OpenSearch Dashboards uses an index in OpenSearch to store saved searches, visualizations and
+ # dashboards. OpenSearch Dashboards creates a new index if the index doesn't already exist.
+@@ -268,8 +270,33 @@
+ #    'ff00::/8',
+ # ]
+ 
++# Set enabled false to hide authentication method in OpenSearch Dashboards.
++# If this setting is commented then all 4 options will be available in OpenSearch Dashboards.
++# Default value will be considered to True.
++data_source.authTypes:
++  NoAuthentication:
++    enabled: false
++  UsernamePassword:
++    enabled: false
++  AWSSigV4:
++    enabled: false
++  TokenExchange:
++    enabled: true
++
+ # Set the value of this setting to false to hide the help menu link to the OpenSearch Dashboards user survey
+ # opensearchDashboards.survey.url: "https://survey.opensearch.org"
++dynamoDBStorage.enabled: true
+ 
+ # Set the value of this setting to true to enable plugin augmentation
+ # vis_augmenter.pluginAugmentationEnabled: true
++
++migrations.skip: true
++
++# Config content-security-policy directives
++csp.rules: ["base-uri 'none'","connect-src 'self'","default-src 'none'","font-src 'self'","frame-ancestors 'none'","img-src data: 'self'","object-src 'none'","script-src 'unsafe-eval' 'self'","style-src 'unsafe-inline' 'self'","worker-src blob: 'self'"]
++
++vis_type_timeline.enabled: false
++vis_type_vega.enabled: false
++vis_type_timeseries.enabled: false
++
++data_source.enabled: true
+diff --git a/neo_specific_config.patch b/neo_specific_config.patch
+new file mode 100644
+index 0000000000..23181c8ffb
+--- /dev/null
++++ b/neo_specific_config.patch
+@@ -0,0 +1,19 @@
++diff --git a/config/opensearch_dashboards.yml b/config/opensearch_dashboards.yml
++index 45868c9571..b49065c156 100644
++--- a/config/opensearch_dashboards.yml
+++++ b/config/opensearch_dashboards.yml
++@@ -282,4 +282,11 @@ data_source.authTypes:
++ dynamoDBStorage.enabled: true
++ 
++ # Skip Kibana migrations
++-migrations.skip: true
++\ No newline at end of file
+++migrations.skip: true
+++
+++# Config content-security-policy directives
+++csp.rules: ["base-uri 'none'","connect-src 'self'","default-src 'none'","font-src 'self'","frame-ancestors 'none'","img-src data: 'self'","object-src 'none'","script-src 'unsafe-eval' 'self'","style-src 'unsafe-inline' 'self'","worker-src blob: 'self'"]
+++
+++vis_type_timeline.enabled: false
+++vis_type_vega.enabled: false
+++vis_type_timeseries.enabled: false
++\ No newline at end of file
+diff --git a/package.json b/package.json
+index 57ff878bbf..b803246d0d 100644
+--- a/package.json
++++ b/package.json
+@@ -127,6 +127,7 @@
+   },
+   "dependencies": {
+     "@aws-crypto/client-node": "^3.1.1",
++    "@aws-sdk/client-sts": "^3.414.0",
+     "@elastic/datemath": "5.0.3",
+     "@elastic/eui": "npm:@opensearch-project/oui@1.3.0",
+     "@elastic/good": "^9.0.1-kibana3",
+@@ -191,6 +192,7 @@
+     "inline-style": "^2.0.0",
+     "ip-cidr": "^2.1.0",
+     "joi": "^14.3.1",
++    "jose": "^4.14.6",
+     "js-yaml": "^3.14.0",
+     "json-stable-stringify": "^1.0.1",
+     "json-stringify-safe": "5.0.1",
+diff --git a/src/plugins/data_source/common/data_sources/index.ts b/src/plugins/data_source/common/data_sources/index.ts
+index 9f269633f3..579dadfd71 100644
+--- a/src/plugins/data_source/common/data_sources/index.ts
++++ b/src/plugins/data_source/common/data_sources/index.ts
+@@ -4,3 +4,12 @@
+  */
+ 
+ export * from './types';
++
++export const AOSD_HEADER_ID_TOKEN = 'x-amzn-aosd-idc-id-token';
++export const AOSD_HEADER_USER_NAME = 'x-amzn-aosd-username';
++export const AOSD_HEADER_ACCESS_KEY = 'x-amzn-aosd-access-key';
++export const AOSD_HEADER_SECRET_KEY = 'x-amzn-aosd-secret-key';
++export const AOSD_HEADER_SESSION_TOKEN = 'x-amzn-aosd-session-token';
++export const AOSD_HEADER_REGION = 'x-amzn-aosd-region';
++export const AOSD_HEADER_SERVICE = 'x-amzn-aosd-service';
++export const AOSD_HEADER_APP_ID = 'x-amzn-aosd-app-id';
+diff --git a/src/plugins/data_source/common/data_sources/types.ts b/src/plugins/data_source/common/data_sources/types.ts
+index 8763c5306c..ee518da1d4 100644
+--- a/src/plugins/data_source/common/data_sources/types.ts
++++ b/src/plugins/data_source/common/data_sources/types.ts
+@@ -11,7 +11,7 @@ export interface DataSourceAttributes extends SavedObjectAttributes {
+   endpoint: string;
+   auth: {
+     type: AuthType;
+-    credentials: UsernamePasswordTypedContent | SigV4Content | undefined;
++    credentials: UsernamePasswordTypedContent | SigV4Content | TokenExchangeContent | undefined;
+   };
+   lastUpdatedTime?: string;
+ }
+@@ -26,6 +26,7 @@ export interface SigV4Content extends SavedObjectAttributes {
+   secretKey: string;
+   region: string;
+   service?: SigV4ServiceName;
++  sessionToken?: string;
+ }
+ 
+ export interface UsernamePasswordTypedContent extends SavedObjectAttributes {
+@@ -33,10 +34,16 @@ export interface UsernamePasswordTypedContent extends SavedObjectAttributes {
+   password: string;
+ }
+ 
++export interface TokenExchangeContent extends SavedObjectAttributes {
++  region: string;
++  roleARN: string;
++}
++
+ export enum AuthType {
+   NoAuth = 'no_auth',
+   UsernamePasswordType = 'username_password',
+   SigV4 = 'sigv4',
++  TokenExchange = 'token_exchange',
+ }
+ 
+ export enum SigV4ServiceName {
+diff --git a/src/plugins/data_source/config.ts b/src/plugins/data_source/config.ts
+index 09ce359789..264d965adf 100644
+--- a/src/plugins/data_source/config.ts
++++ b/src/plugins/data_source/config.ts
+@@ -38,6 +38,20 @@ export const configSchema = schema.object({
+     appender: fileAppenderSchema,
+   }),
+   endpointDeniedIPs: schema.maybe(schema.arrayOf(schema.string())),
++  authTypes: schema.object({
++    NoAuthentication: schema.object({
++      enabled: schema.boolean({ defaultValue: true }),
++    }),
++    UsernamePassword: schema.object({
++      enabled: schema.boolean({ defaultValue: true }),
++    }),
++    AWSSigV4: schema.object({
++      enabled: schema.boolean({ defaultValue: true }),
++    }),
++    TokenExchange: schema.object({
++      enabled: schema.boolean({ defaultValue: true }),
++    }),
++  }),
+ });
+ 
+ export type DataSourcePluginConfigType = TypeOf<typeof configSchema>;
+diff --git a/src/plugins/data_source/server/aws/aws_sigv4_signer.ts b/src/plugins/data_source/server/aws/aws_sigv4_signer.ts
+new file mode 100644
+index 0000000000..a1d951f8dd
+--- /dev/null
++++ b/src/plugins/data_source/server/aws/aws_sigv4_signer.ts
+@@ -0,0 +1,55 @@
++/*
++ * Copyright OpenSearch Contributors
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++import { Connection } from '@opensearch-project/opensearch-next';
++import {
++  AOSD_HEADER_ACCESS_KEY,
++  AOSD_HEADER_SECRET_KEY,
++  AOSD_HEADER_SESSION_TOKEN,
++  AOSD_HEADER_REGION,
++  AOSD_HEADER_SERVICE,
++} from '../../common/data_sources';
++const aws4 = require('aws4');
++const crypto = require('crypto');
++
++function buildSignedRequestObject(request = {}) {
++  request.service = request.headers[AOSD_HEADER_SERVICE] || null;
++  request.region = request.headers[AOSD_HEADER_REGION] || null;
++
++  const accessKeyId = request.headers[AOSD_HEADER_ACCESS_KEY] || null;
++  const secretAccessKey = request.headers[AOSD_HEADER_SECRET_KEY] || null;
++  const sessionToken = request.headers[AOSD_HEADER_SESSION_TOKEN] || null;
++  const sigv4Credentials = {
++    accessKeyId,
++    secretAccessKey,
++    sessionToken,
++  };
++
++  deleteHeaders(request);
++
++  request.headers = request.headers || {};
++  request.headers['host'] = request.hostname;
++  const signed = aws4.sign(request, sigv4Credentials);
++  signed.headers['x-amz-content-sha256'] = crypto
++    .createHash('sha256')
++    .update(request.body || '', 'utf8')
++    .digest('hex');
++  return signed;
++}
++
++function deleteHeaders(request = {}) {
++  delete request.headers[AOSD_HEADER_ACCESS_KEY];
++  delete request.headers[AOSD_HEADER_SECRET_KEY];
++  delete request.headers[AOSD_HEADER_SESSION_TOKEN];
++  delete request.headers[AOSD_HEADER_SERVICE];
++  delete request.headers[AOSD_HEADER_REGION];
++}
++
++export class AwsSigv4SignerConnection extends Connection {
++  buildRequestObject(params) {
++    const request = super.buildRequestObject(params);
++    return buildSignedRequestObject(request);
++  }
++}
+diff --git a/src/plugins/data_source/server/client/__mocks__/neo_credential_provider.ts b/src/plugins/data_source/server/client/__mocks__/neo_credential_provider.ts
+new file mode 100644
+index 0000000000..5bd1bdb515
+--- /dev/null
++++ b/src/plugins/data_source/server/client/__mocks__/neo_credential_provider.ts
+@@ -0,0 +1,6 @@
++/*
++ * Copyright OpenSearch Contributors
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++jest.mock('jose', () => {});
+diff --git a/src/plugins/data_source/server/client/client_pool.ts b/src/plugins/data_source/server/client/client_pool.ts
+index aa8edad682..4b1f71e722 100644
+--- a/src/plugins/data_source/server/client/client_pool.ts
++++ b/src/plugins/data_source/server/client/client_pool.ts
+@@ -30,6 +30,10 @@ export class OpenSearchClientPool {
+   //   key: endpoint + dataSourceId + lastUpdatedTime together to support update case.
+   //   value: OpenSearch client | Legacy client
+   private awsClientCache?: LRUCache<string, Client | LegacyClient>;
++  // LRU cache of Neo aws clients
++  //   key: endpoint + dataSourceId + IdcUserId + ApplicationId + lastUpdatedTime together to support update case.
++  //   value: OpenSearch client | Legacy client
++  private neoAWSClientCache?: LRUCache<string, Client | LegacyClient>;
+   private isClosed = false;
+ 
+   constructor(private logger: Logger) {}
+@@ -73,19 +77,47 @@ export class OpenSearchClientPool {
+     });
+     this.logger.info(`Created data source aws client pool of size ${size}`);
+ 
+-    const getClientFromPool = (key: string, authType: AuthType) => {
+-      const selectedCache = authType === AuthType.SigV4 ? this.awsClientCache : this.clientCache;
++    // aws client specific pool
++    this.neoAWSClientCache = new LRUCache({
++      max: size,
++      maxAge: MAX_AGE,
+ 
++      async dispose(key, client) {
++        try {
++          await client.close();
++        } catch (error: any) {
++          logger.warn(
++            `Error closing OpenSearch client when removing from neo aws client pool: ${error.message}`
++          );
++        }
++      },
++    });
++    this.logger.info(`Created data source neo aws client pool of size ${size}`);
++
++    const getClientFromPool = (key: string, authType: AuthType) => {
++      const selectedCache = getSelectedCache(authType);
+       return selectedCache!.get(key);
+     };
+ 
+     const addClientToPool = (key: string, authType: string, client: Client | LegacyClient) => {
+-      const selectedCache = authType === AuthType.SigV4 ? this.awsClientCache : this.clientCache;
++      const selectedCache = getSelectedCache(authType);
+       if (!selectedCache?.has(key)) {
+         return selectedCache!.set(key, client);
+       }
+     };
+ 
++    const getSelectedCache = (authType: string) => {
++      let selectedCache;
++      if (authType === AuthType.SigV4) {
++        selectedCache = this.awsClientCache;
++      } else if (authType === AuthType.TokenExchange) {
++        selectedCache = this.neoAWSClientCache;
++      } else {
++        selectedCache = this.clientCache;
++      }
++      return selectedCache;
++    };
++
+     return {
+       getClientFromPool,
+       addClientToPool,
+diff --git a/src/plugins/data_source/server/client/configure_client.test.ts b/src/plugins/data_source/server/client/configure_client.test.ts
+index 32aacb5ead..5f9fb42ac2 100644
+--- a/src/plugins/data_source/server/client/configure_client.test.ts
++++ b/src/plugins/data_source/server/client/configure_client.test.ts
+@@ -11,6 +11,7 @@ import {
+   AuthType,
+   UsernamePasswordTypedContent,
+   SigV4Content,
++  TokenExchangeContent,
+ } from '../../common/data_sources/types';
+ import { DataSourcePluginConfigType } from '../../config';
+ import { ClientMock, parseClientOptionsMock } from './configure_client.test.mocks';
+@@ -25,6 +26,18 @@ import { DataSourceClientParams } from '../types';
+ 
+ const DATA_SOURCE_ID = 'a54b76ec86771ee865a0f74a305dfff8';
+ 
++jest.mock('./neo_credential_provider', () => ({
++  buildNeoUserInfo: jest
++    .fn()
++    .mockReturnValue({ applicationId: 'test', identityToken: 'test', userName: 'test' }),
++  getCredentials: jest.fn().mockReturnValue({
++    accessKey: 'test',
++    secretKey: 'test',
++    sessionToken: 'test',
++    region: 'us-east-1',
++  }),
++}));
++
+ // TODO: improve UT
+ describe('configureClient', () => {
+   let logger: ReturnType<typeof loggingSystemMock.createLogger>;
+@@ -38,6 +51,7 @@ describe('configureClient', () => {
+   let dataSourceClientParams: DataSourceClientParams;
+   let usernamePasswordAuthContent: UsernamePasswordTypedContent;
+   let sigV4AuthContent: SigV4Content;
++  let tokenExchangeContent: TokenExchangeContent;
+ 
+   beforeEach(() => {
+     dsClient = opensearchClientMock.createInternalClient();
+@@ -70,6 +84,11 @@ describe('configureClient', () => {
+       secretKey: 'secretKey',
+     };
+ 
++    tokenExchangeContent = {
++      region: 'us-east-1',
++      roleARN: 'test-role',
++    };
++
+     dataSourceAttr = {
+       title: 'title',
+       endpoint: 'http://localhost',
+@@ -238,4 +257,41 @@ describe('configureClient', () => {
+     expect(savedObjectsMock.get).toHaveBeenCalledTimes(1);
+     expect(decodeAndDecryptSpy).toHaveBeenCalledTimes(1);
+   });
++
++  test('should throw error when no credentials present for token_exchange', async () => {
++    savedObjectsMock.get.mockReset().mockResolvedValueOnce({
++      id: DATA_SOURCE_ID,
++      type: DATA_SOURCE_SAVED_OBJECT_TYPE,
++      attributes: {
++        ...dataSourceAttr,
++        auth: {
++          type: AuthType.TokenExchange,
++        },
++      },
++      references: [],
++    });
++    await expect(
++      configureClient(dataSourceClientParams, clientPoolSetup, config, logger)
++    ).rejects.toThrowError();
++  });
++
++  test('configureClient with auth.type == token_exchange and crdentials should retunrn child client', async () => {
++    savedObjectsMock.get.mockReset().mockResolvedValueOnce({
++      id: DATA_SOURCE_ID,
++      type: DATA_SOURCE_SAVED_OBJECT_TYPE,
++      attributes: {
++        ...dataSourceAttr,
++        auth: {
++          type: AuthType.TokenExchange,
++          credentials: tokenExchangeContent,
++        },
++      },
++      references: [],
++    });
++    const client = await configureClient(dataSourceClientParams, clientPoolSetup, config, logger);
++
++    expect(ClientMock).toHaveBeenCalledTimes(1);
++    expect(savedObjectsMock.get).toHaveBeenCalledTimes(1);
++    expect(client).toBe(dsClient.child.mock.results[0].value);
++  });
+ });
+diff --git a/src/plugins/data_source/server/client/configure_client.ts b/src/plugins/data_source/server/client/configure_client.ts
+index 8cc835980c..07599cc3ea 100644
+--- a/src/plugins/data_source/server/client/configure_client.ts
++++ b/src/plugins/data_source/server/client/configure_client.ts
+@@ -7,12 +7,18 @@ import { Client, ClientOptions } from '@opensearch-project/opensearch-next';
+ import { Client as LegacyClient } from 'elasticsearch';
+ import { Credentials } from 'aws-sdk';
+ import { AwsSigv4Signer } from '@opensearch-project/opensearch-next/aws';
+-import { Logger } from '../../../../../src/core/server';
++import { Logger, OpenSearchDashboardsRequest } from '../../../../../src/core/server';
+ import {
+   AuthType,
+   DataSourceAttributes,
++  TokenExchangeContent,
+   SigV4Content,
+   UsernamePasswordTypedContent,
++  AOSD_HEADER_ACCESS_KEY,
++  AOSD_HEADER_SECRET_KEY,
++  AOSD_HEADER_SESSION_TOKEN,
++  AOSD_HEADER_REGION,
++  AOSD_HEADER_SERVICE,
+ } from '../../common/data_sources';
+ import { DataSourcePluginConfigType } from '../../config';
+ import { CryptographyServiceSetup } from '../cryptography_service';
+@@ -27,9 +33,17 @@ import {
+   getDataSource,
+   generateCacheKey,
+ } from './configure_client_utils';
++import { NeoUserInfo, buildNeoUserInfo, getCredentials } from './neo_credential_provider';
++import { AwsSigv4SignerConnection } from '../aws/aws_sigv4_signer';
+ 
+ export const configureClient = async (
+-  { dataSourceId, savedObjects, cryptography, testClientDataSourceAttr }: DataSourceClientParams,
++  {
++    dataSourceId,
++    savedObjects,
++    cryptography,
++    testClientDataSourceAttr,
++    request,
++  }: DataSourceClientParams,
+   openSearchClientPoolSetup: OpenSearchClientPoolSetup,
+   config: DataSourcePluginConfigType,
+   logger: Logger
+@@ -61,13 +75,15 @@ export const configureClient = async (
+     const rootClient = getRootClient(
+       dataSource,
+       openSearchClientPoolSetup.getClientFromPool,
+-      dataSourceId
++      dataSourceId,
++      request
+     ) as Client;
+ 
+     return await getQueryClient(
+       dataSource,
+       openSearchClientPoolSetup.addClientToPool,
+       config,
++      request,
+       cryptography,
+       rootClient,
+       dataSourceId,
+@@ -98,6 +114,7 @@ const getQueryClient = async (
+   dataSourceAttr: DataSourceAttributes,
+   addClientToPool: (endpoint: string, authType: AuthType, client: Client | LegacyClient) => void,
+   config: DataSourcePluginConfigType,
++  request: OpenSearchDashboardsRequest,
+   cryptography?: CryptographyServiceSetup,
+   rootClient?: Client,
+   dataSourceId?: string,
+@@ -108,11 +125,13 @@ const getQueryClient = async (
+     endpoint,
+   } = dataSourceAttr;
+   const clientOptions = parseClientOptions(config, endpoint);
+-  const cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
++  let cacheKey;
+ 
+   switch (type) {
+     case AuthType.NoAuth:
+       if (!rootClient) rootClient = new Client(clientOptions);
++
++      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
+       addClientToPool(cacheKey, type, rootClient);
+ 
+       return rootClient.child();
+@@ -123,6 +142,8 @@ const getQueryClient = async (
+         : (dataSourceAttr.auth.credentials as UsernamePasswordTypedContent);
+ 
+       if (!rootClient) rootClient = new Client(clientOptions);
++
++      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
+       addClientToPool(cacheKey, type, rootClient);
+ 
+       return getBasicAuthClient(rootClient, credential);
+@@ -133,15 +154,59 @@ const getQueryClient = async (
+         : (dataSourceAttr.auth.credentials as SigV4Content);
+ 
+       const awsClient = rootClient ? rootClient : getAWSClient(awsCredential, clientOptions);
++
++      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
+       addClientToPool(cacheKey, type, awsClient);
+ 
+       return awsClient;
+ 
++    case AuthType.TokenExchange:
++      if (!dataSourceAttr.auth.credentials) {
++        throw Error(`Credentials not found.`);
++      }
++
++      const tokenExchangeCredentials = dataSourceAttr.auth.credentials as TokenExchangeContent;
++      const { region, roleARN } = tokenExchangeCredentials;
++      const neoUserInfo: NeoUserInfo = buildNeoUserInfo(request);
++
++      const credentials = await getCredentials(neoUserInfo, roleARN, region);
++
++      if (!rootClient) {
++        rootClient = new Client({
++          Connection: AwsSigv4SignerConnection,
++          ...clientOptions,
++        });
++
++        cacheKey = generateCacheKey(
++          dataSourceAttr,
++          dataSourceId,
++          neoUserInfo.userName,
++          neoUserInfo.applicationId
++        );
++        addClientToPool(cacheKey, type, rootClient);
++      }
++
++      const awsOpenSearchClient = getAWSSigV4Client(rootClient, credentials);
++      return awsOpenSearchClient;
++
+     default:
+       throw Error(`${type} is not a supported auth type for data source`);
+   }
+ };
+ 
++const getAWSSigV4Client = (rootClient: Client, credential: SigV4Content): Client => {
++  const { accessKey, secretKey, region, sessionToken } = credential;
++  return rootClient.child({
++    headers: {
++      [AOSD_HEADER_ACCESS_KEY]: accessKey,
++      [AOSD_HEADER_SECRET_KEY]: secretKey,
++      [AOSD_HEADER_SESSION_TOKEN]: sessionToken,
++      [AOSD_HEADER_REGION]: region,
++      [AOSD_HEADER_SERVICE]: 'es',
++    },
++  });
++};
++
+ const getBasicAuthClient = (
+   rootClient: Client,
+   credential: UsernamePasswordTypedContent
+diff --git a/src/plugins/data_source/server/client/configure_client_utils.ts b/src/plugins/data_source/server/client/configure_client_utils.ts
+index 4405f8f145..d878bbef51 100644
+--- a/src/plugins/data_source/server/client/configure_client_utils.ts
++++ b/src/plugins/data_source/server/client/configure_client_utils.ts
+@@ -5,13 +5,18 @@
+ 
+ import { Client } from '@opensearch-project/opensearch-next';
+ import { Client as LegacyClient } from 'elasticsearch';
+-import { SavedObjectsClientContract } from '../../../../../src/core/server';
++import {
++  OpenSearchDashboardsRequest,
++  SavedObjectsClientContract,
++} from '../../../../../src/core/server';
+ import { DATA_SOURCE_SAVED_OBJECT_TYPE } from '../../common';
+ import {
+   DataSourceAttributes,
+   UsernamePasswordTypedContent,
+   SigV4Content,
+   AuthType,
++  AOSD_HEADER_USER_NAME,
++  AOSD_HEADER_APP_ID,
+ } from '../../common/data_sources';
+ import { CryptographyServiceSetup } from '../cryptography_service';
+ import { createDataSourceError } from '../lib/error';
+@@ -22,24 +27,32 @@ import { createDataSourceError } from '../lib/error';
+  *
+  * @param dataSourceAttr data source saved objects attributes
+  * @param dataSourceId id of data source saved Object
+- * @param addClientToPool function to get client from client pool
++ * @param getClientFromPool function to get client from client pool
+  * @returns cached OpenSearch client, or undefined if cache miss
+  */
+ export const getRootClient = (
+   dataSourceAttr: DataSourceAttributes,
+   getClientFromPool: (endpoint: string, authType: AuthType) => Client | LegacyClient | undefined,
+-  dataSourceId?: string
++  dataSourceId?: string,
++  request?: OpenSearchDashboardsRequest
+ ): Client | LegacyClient | undefined => {
+   const {
+     auth: { type },
+     lastUpdatedTime,
+   } = dataSourceAttr;
+   let cachedClient;
+-  const cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
++  const idcUserName = request?.headers[AOSD_HEADER_USER_NAME] as string;
++  const applicationId = request?.headers[AOSD_HEADER_APP_ID] as string;
++  const cacheKey = generateCacheKey(dataSourceAttr, dataSourceId, idcUserName, applicationId);
+ 
+   // return undefined when building SigV4 test client with new credentials
+   if (type === AuthType.SigV4) {
+     cachedClient = dataSourceId && lastUpdatedTime ? getClientFromPool(cacheKey, type) : undefined;
++  } else if (type === AuthType.TokenExchange) {
++    cachedClient =
++      dataSourceId && idcUserName && applicationId && lastUpdatedTime
++        ? getClientFromPool(cacheKey, type)
++        : undefined;
+   } else {
+     cachedClient = getClientFromPool(cacheKey, type);
+   }
+@@ -128,7 +141,12 @@ export const getAWSCredential = async (
+   return credential;
+ };
+ 
+-export const generateCacheKey = (dataSourceAttr: DataSourceAttributes, dataSourceId?: string) => {
++export const generateCacheKey = (
++  dataSourceAttr: DataSourceAttributes,
++  dataSourceId?: string,
++  idcUserName?: string,
++  applicationId?: string
++) => {
+   const CACHE_KEY_DELIMITER = ',';
+   const {
+     auth: { type },
+@@ -138,10 +156,15 @@ export const generateCacheKey = (dataSourceAttr: DataSourceAttributes, dataSourc
+   // opensearch-js client doesn't support spawning child with aws sigv4 connection class,
+   // we are storing/getting the actual client instead of rootClient in/from aws client pool,
+   // by a key of "<endpoint>,<dataSourceId>,<lastUpdatedTime>"
+-  const key =
+-    type === AuthType.SigV4
+-      ? endpoint + CACHE_KEY_DELIMITER + dataSourceId + CACHE_KEY_DELIMITER + lastUpdatedTime
+-      : endpoint;
+-
++  let key;
++  if (type === AuthType.SigV4) {
++    key = [endpoint, dataSourceId, lastUpdatedTime].join(CACHE_KEY_DELIMITER);
++  } else if (type === AuthType.TokenExchange) {
++    key = [endpoint, dataSourceId, idcUserName, applicationId, lastUpdatedTime].join(
++      CACHE_KEY_DELIMITER
++    );
++  } else {
++    key = endpoint;
++  }
+   return key;
+ };
+diff --git a/src/plugins/data_source/server/client/neo_credential_provider.ts b/src/plugins/data_source/server/client/neo_credential_provider.ts
+new file mode 100644
+index 0000000000..4c151416ee
+--- /dev/null
++++ b/src/plugins/data_source/server/client/neo_credential_provider.ts
+@@ -0,0 +1,108 @@
++/*
++ * Copyright OpenSearch Contributors
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++import { STSClient, AssumeRoleCommand, AssumeRoleCommandInput } from '@aws-sdk/client-sts';
++import * as jose from 'jose';
++import { OpenSearchDashboardsRequest } from 'src/core/server';
++import {
++  AOSD_HEADER_APP_ID,
++  AOSD_HEADER_ID_TOKEN,
++  AOSD_HEADER_USER_NAME,
++  SigV4Content,
++} from '../../common/data_sources';
++
++const STS_ROLE_SESSION_DURATION = 900; // In Seconds
++const STS_PROVIDER_ARN = 'arn:aws:iam:aws::contextProvider/IdentityCenter';
++
++export interface NeoUserInfo {
++  applicationId: string;
++  identityToken: string;
++  userName: string;
++}
++
++export function buildNeoUserInfo(request: OpenSearchDashboardsRequest): NeoUserInfo {
++  return {
++    applicationId: request.headers[AOSD_HEADER_APP_ID] as string,
++    identityToken: request.headers[AOSD_HEADER_ID_TOKEN] as string,
++    userName: request.headers[AOSD_HEADER_USER_NAME] as string,
++  };
++}
++
++export async function getCredentials(
++  userInfo: NeoUserInfo,
++  roleARN: string,
++  region: string
++): Promise<SigV4Content> {
++  const { identityToken, userName } = userInfo;
++  try {
++    const contextAssertion = await getStsClaim(identityToken);
++    return await assumeRole(contextAssertion, roleARN, userName, region);
++  } catch (error: any) {
++    throw Error(`Error while fetching credentials ${error.message}`);
++  }
++}
++
++const getSTSClient = (): STSClient => {
++  const applicationRegion = process.env.REGION;
++  return new STSClient({ region: applicationRegion });
++};
++
++const getStsClaim = async (identityToken: string): Promise<string> => {
++  try {
++    const decodedJwt = jose.decodeJwt(identityToken);
++    /**
++     * PEZ team has deployed IdC changes for PEZ guardrail policy to Prod. Because of this change, we need to onboard
++     * to API allow listing. More details can be found in https://quip-amazon.com/j6LHAKPbuNt7/Guardrails-for-PEZNon-PEZ-sessions-API-Allow-listing
++     * We have decided for Beta, as we do not do credential exchange on AOS side, we can switch to sts:audit_context
++     * and then we onboard to this API allow listing after initial beta launch
++     */
++    return decodedJwt['sts:audit_context'] as string;
++  } catch (error: any) {
++    throw new Error(`Invalid JWT: ${error.message}`);
++  }
++};
++
++const assumeRole = async (
++  contextAssertion: string,
++  roleARN: string,
++  username: string,
++  region: string
++): Promise<SigV4Content> => {
++  const params: AssumeRoleCommandInput = {
++    RoleArn: roleARN,
++    RoleSessionName: `aosd-${username}`,
++    DurationSeconds: STS_ROLE_SESSION_DURATION,
++    ProvidedContexts: [
++      {
++        ProviderArn: STS_PROVIDER_ARN,
++        ContextAssertion: contextAssertion,
++      },
++    ],
++  };
++  const command = new AssumeRoleCommand(params);
++
++  try {
++    const stsClient = getSTSClient();
++    const data = await stsClient.send(command);
++    if (
++      data.Credentials &&
++      data.Credentials.AccessKeyId &&
++      data.Credentials.SecretAccessKey &&
++      data.Credentials.SessionToken
++    ) {
++      const credential = {
++        region,
++        accessKey: data.Credentials?.AccessKeyId || '',
++        secretKey: data.Credentials?.SecretAccessKey || '',
++        sessionToken: data.Credentials?.SessionToken,
++      };
++      return credential;
++    } else {
++      throw Error(`Assume Role failed`);
++    }
++  } catch (error: any) {
++    throw Error(`Error while assuming role ${error.message}`);
++  }
++};
+diff --git a/src/plugins/data_source/server/data_source_service.test.ts b/src/plugins/data_source/server/data_source_service.test.ts
+index 6901885623..d38ddabebd 100644
+--- a/src/plugins/data_source/server/data_source_service.test.ts
++++ b/src/plugins/data_source/server/data_source_service.test.ts
+@@ -8,6 +8,7 @@ import { DataSourcePluginConfigType } from '../config';
+ import { DataSourceService } from './data_source_service';
+ 
+ const logger = loggingSystemMock.create();
++jest.mock('./client/neo_credential_provider');
+ 
+ describe('Data Source Service', () => {
+   let service: DataSourceService;
+diff --git a/src/plugins/data_source/server/legacy/configure_legacy_client.test.ts b/src/plugins/data_source/server/legacy/configure_legacy_client.test.ts
+index 59c110d06d..3e2e701caf 100644
+--- a/src/plugins/data_source/server/legacy/configure_legacy_client.test.ts
++++ b/src/plugins/data_source/server/legacy/configure_legacy_client.test.ts
+@@ -18,6 +18,8 @@ import { configureLegacyClient } from './configure_legacy_client';
+ 
+ const DATA_SOURCE_ID = 'a54b76ec86771ee865a0f74a305dfff8';
+ 
++jest.mock('../client/neo_credential_provider');
++
+ // TODO: improve UT
+ describe('configureLegacyClient', () => {
+   let logger: ReturnType<typeof loggingSystemMock.createLogger>;
+diff --git a/src/plugins/data_source/server/legacy/configure_legacy_client.ts b/src/plugins/data_source/server/legacy/configure_legacy_client.ts
+index 8c02233950..36df2a51c5 100644
+--- a/src/plugins/data_source/server/legacy/configure_legacy_client.ts
++++ b/src/plugins/data_source/server/legacy/configure_legacy_client.ts
+@@ -7,19 +7,26 @@ import { Client } from '@opensearch-project/opensearch-next';
+ import { Client as LegacyClient, ConfigOptions } from 'elasticsearch';
+ import { Credentials, Config } from 'aws-sdk';
+ import { get } from 'lodash';
+-import HttpAmazonESConnector from 'http-aws-es';
++import HttpAmazonESConnector from './http-aws-es/connector';
+ import {
+   Headers,
+   LegacyAPICaller,
+   LegacyCallAPIOptions,
+   LegacyOpenSearchErrorHelpers,
+   Logger,
++  OpenSearchDashboardsRequest,
+ } from '../../../../../src/core/server';
+ import {
+   AuthType,
+   DataSourceAttributes,
+   SigV4Content,
+   UsernamePasswordTypedContent,
++  TokenExchangeContent,
++  AOSD_HEADER_ACCESS_KEY,
++  AOSD_HEADER_SECRET_KEY,
++  AOSD_HEADER_SESSION_TOKEN,
++  AOSD_HEADER_REGION,
++  AOSD_HEADER_SERVICE,
+ } from '../../common/data_sources';
+ import { DataSourcePluginConfigType } from '../../config';
+ import { CryptographyServiceSetup } from '../cryptography_service';
+@@ -34,9 +41,10 @@ import {
+   getDataSource,
+   generateCacheKey,
+ } from '../client/configure_client_utils';
++import { NeoUserInfo, buildNeoUserInfo, getCredentials } from '../client/neo_credential_provider';
+ 
+ export const configureLegacyClient = async (
+-  { dataSourceId, savedObjects, cryptography }: DataSourceClientParams,
++  { dataSourceId, savedObjects, cryptography, request }: DataSourceClientParams,
+   callApiParams: LegacyClientCallAPIParams,
+   openSearchClientPoolSetup: OpenSearchClientPoolSetup,
+   config: DataSourcePluginConfigType,
+@@ -47,7 +55,8 @@ export const configureLegacyClient = async (
+     const rootClient = getRootClient(
+       dataSourceAttr,
+       openSearchClientPoolSetup.getClientFromPool,
+-      dataSourceId
++      dataSourceId,
++      request
+     ) as LegacyClient;
+ 
+     return await getQueryClient(
+@@ -56,6 +65,7 @@ export const configureLegacyClient = async (
+       callApiParams,
+       openSearchClientPoolSetup.addClientToPool,
+       config,
++      request,
+       rootClient,
+       dataSourceId
+     );
+@@ -85,6 +95,7 @@ const getQueryClient = async (
+   { endpoint, clientParams, options }: LegacyClientCallAPIParams,
+   addClientToPool: (endpoint: string, authType: AuthType, client: Client | LegacyClient) => void,
+   config: DataSourcePluginConfigType,
++  request: OpenSearchDashboardsRequest,
+   rootClient?: LegacyClient,
+   dataSourceId?: string
+ ) => {
+@@ -93,11 +104,12 @@ const getQueryClient = async (
+     endpoint: nodeUrl,
+   } = dataSourceAttr;
+   const clientOptions = parseClientOptions(config, nodeUrl);
+-  const cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
++  let cacheKey;
+ 
+   switch (type) {
+     case AuthType.NoAuth:
+       if (!rootClient) rootClient = new LegacyClient(clientOptions);
++      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
+       addClientToPool(cacheKey, type, rootClient);
+ 
+       return await (callAPI.bind(null, rootClient) as LegacyAPICaller)(
+@@ -110,6 +122,7 @@ const getQueryClient = async (
+       const credential = await getCredential(dataSourceAttr, cryptography);
+ 
+       if (!rootClient) rootClient = new LegacyClient(clientOptions);
++      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
+       addClientToPool(cacheKey, type, rootClient);
+ 
+       return getBasicAuthClient(rootClient, { endpoint, clientParams, options }, credential);
+@@ -118,6 +131,7 @@ const getQueryClient = async (
+       const awsCredential = await getAWSCredential(dataSourceAttr, cryptography);
+ 
+       const awsClient = rootClient ? rootClient : getAWSClient(awsCredential, clientOptions);
++      cacheKey = generateCacheKey(dataSourceAttr, dataSourceId);
+       addClientToPool(cacheKey, type, awsClient);
+ 
+       return await (callAPI.bind(null, awsClient) as LegacyAPICaller)(
+@@ -126,6 +140,30 @@ const getQueryClient = async (
+         options
+       );
+ 
++    case AuthType.TokenExchange:
++      if (!dataSourceAttr.auth.credentials) {
++        throw Error(`Credentials not found.`);
++      }
++
++      const tokenExchangeCredentials = dataSourceAttr.auth.credentials as TokenExchangeContent;
++      const { region, roleARN } = tokenExchangeCredentials;
++      const neoUserInfo: NeoUserInfo = buildNeoUserInfo(request);
++
++      const credentials = await getCredentials(neoUserInfo, roleARN, region);
++
++      if (!rootClient) {
++        rootClient = getAWSClient(credentials, clientOptions);
++        cacheKey = generateCacheKey(
++          dataSourceAttr,
++          dataSourceId,
++          neoUserInfo.userName,
++          neoUserInfo.applicationId
++        );
++        addClientToPool(cacheKey, type, rootClient);
++      }
++
++      return getAWSSigV4Client(rootClient, { endpoint, clientParams, options }, credentials);
++
+     default:
+       throw Error(`${type} is not a supported auth type for data source`);
+   }
+@@ -164,7 +202,7 @@ const callAPI = async (
+       }
+       return request.then(resolve, reject);
+     });
+-  } catch (err) {
++  } catch (err: any) {
+     if (!options.wrap401Errors || err.statusCode !== 401) {
+       throw err;
+     }
+@@ -193,13 +231,33 @@ const getBasicAuthClient = async (
+   return await (callAPI.bind(null, rootClient) as LegacyAPICaller)(endpoint, clientParams, options);
+ };
+ 
++const getAWSSigV4Client = async (
++  rootClient: LegacyClient,
++  { endpoint, clientParams = {}, options }: LegacyClientCallAPIParams,
++  credential: SigV4Content
++) => {
++  const { accessKey, secretKey, region, sessionToken } = credential;
++  const headers: Headers = {
++    [AOSD_HEADER_ACCESS_KEY]: accessKey,
++    [AOSD_HEADER_SECRET_KEY]: secretKey,
++    [AOSD_HEADER_SESSION_TOKEN]: sessionToken,
++    [AOSD_HEADER_REGION]: region,
++    [AOSD_HEADER_SERVICE]: 'es',
++  };
++  clientParams.headers = Object.assign({}, clientParams.headers, headers);
++
++  return await (callAPI.bind(null, rootClient) as LegacyAPICaller)(endpoint, clientParams, options);
++};
++
+ const getAWSClient = (credential: SigV4Content, clientOptions: ConfigOptions): LegacyClient => {
+-  const { accessKey, secretKey, region, service } = credential;
++  const { accessKey, secretKey, region, sessionToken, service } = credential;
+   const client = new LegacyClient({
+     connectionClass: HttpAmazonESConnector,
+     awsConfig: new Config({
+       region,
+-      credentials: new Credentials({ accessKeyId: accessKey, secretAccessKey: secretKey }),
++      credentials: sessionToken
++        ? new Credentials({ accessKeyId: accessKey, secretAccessKey: secretKey, sessionToken })
++        : new Credentials({ accessKeyId: accessKey, secretAccessKey: secretKey }),
+     }),
+     service,
+     ...clientOptions,
+diff --git a/src/plugins/data_source/server/legacy/http-aws-es/connector.js b/src/plugins/data_source/server/legacy/http-aws-es/connector.js
+new file mode 100644
+index 0000000000..33a51f0956
+--- /dev/null
++++ b/src/plugins/data_source/server/legacy/http-aws-es/connector.js
+@@ -0,0 +1,145 @@
++/*
++ * Copyright OpenSearch Contributors
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++/**
++ * A connection handler for Amazon ES.
++ *
++ * Uses the aws-sdk to make signed requests to an Amazon ES endpoint.
++ *
++ * @param client {Client} - The Client that this class belongs to
++ * @param config {Object} - Configuration options
++ * @param [config.protocol=http:] {String} - The HTTP protocol that this connection will use, can be set to https:
++ * @class HttpConnector
++ */
++import HttpClient from './src/node';
++import { Config, Credentials } from 'aws-sdk';
++import {
++  AOSD_HEADER_ACCESS_KEY,
++  AOSD_HEADER_SECRET_KEY,
++  AOSD_HEADER_SESSION_TOKEN,
++  AOSD_HEADER_REGION,
++  AOSD_HEADER_SERVICE,
++} from '../../../common/data_sources';
++
++const AWS = require('aws-sdk');
++const HttpConnector = require('elasticsearch/src/lib/connectors/http');
++
++// This is reimplementation of https://github.com/TheDeveloper/http-aws-es/blob/master/connector.js
++class HttpAmazonESConnector extends HttpConnector {
++  constructor(host, config) {
++    super(host, config);
++
++    const protocol = host.protocol;
++    const port = host.port;
++    const endpoint = new AWS.Endpoint(host.host);
++
++    if (protocol) endpoint.protocol = protocol.replace(/:?$/, ':');
++    if (port) endpoint.port = port;
++
++    this.awsConfig = config.awsConfig || AWS.config;
++    this.endpoint = endpoint;
++    this.httpOptions = config.httpOptions || this.awsConfig.httpOptions;
++    this.httpClient = new HttpClient();
++  }
++
++  request(params, cb) {
++    const reqParams = this.makeReqParams(params);
++    let req;
++    let cancelled;
++
++    const cancel = () => {
++      cancelled = true;
++      req && req.abort();
++    };
++
++    const done = (err, response, status, headers) => {
++      this.log.trace(params.method, reqParams, params.body, response, status);
++      cb(err, response, status, headers);
++    };
++
++    // load creds
++    this.getAWSCredentials(reqParams)
++      .catch((e) => {
++        if (e && e.message) e.message = `AWS Credentials error: ${e.message}`;
++        throw e;
++      })
++      .then((creds) => {
++        if (cancelled) {
++          return;
++        }
++
++        const service = reqParams.headers[AOSD_HEADER_SERVICE] || null;
++        delete reqParams.headers[AOSD_HEADER_SERVICE];
++
++        const request = this.createRequest(params, reqParams);
++        // Sign the request (Sigv4)
++        this.signRequest(request, creds, service);
++        req = this.httpClient.handleRequest(request, this.httpOptions, done);
++      })
++      .catch(done);
++
++    return cancel;
++  }
++
++  // Modified this function to get credentials from request header
++  // and reassign `this.awsConfig` with new credentials.
++  getAWSCredentials(reqParams) {
++    const accessKeyId = reqParams.headers[AOSD_HEADER_ACCESS_KEY] || null;
++    const secretAccessKey = reqParams.headers[AOSD_HEADER_SECRET_KEY] || null;
++    const sessionToken = reqParams.headers[AOSD_HEADER_SESSION_TOKEN] || null;
++    const region = reqParams.headers[AOSD_HEADER_REGION] || null;
++
++    this.deleteHeaders(reqParams);
++
++    this.awsConfig = new Config({
++      region,
++      credentials: sessionToken
++        ? new Credentials({ accessKeyId, secretAccessKey, sessionToken })
++        : new Credentials({ accessKeyId, secretAccessKey }),
++    });
++
++    return new Promise((resolve, reject) => {
++      this.awsConfig.getCredentials((err, creds) => {
++        if (err) return reject(err);
++        return resolve(creds);
++      });
++    });
++  }
++
++  // Function to delete headers once read
++  deleteHeaders(request = {}) {
++    delete request.headers[AOSD_HEADER_ACCESS_KEY];
++    delete request.headers[AOSD_HEADER_SECRET_KEY];
++    delete request.headers[AOSD_HEADER_SESSION_TOKEN];
++    delete request.headers[AOSD_HEADER_REGION];
++  }
++
++  createRequest(params, reqParams) {
++    const request = new AWS.HttpRequest(this.endpoint);
++
++    // copy across params
++    Object.assign(request, reqParams);
++
++    request.region = this.awsConfig.region;
++    if (!request.headers) request.headers = {};
++    let body = params.body;
++
++    if (body) {
++      let contentLength = Buffer.isBuffer(body) ? body.length : Buffer.byteLength(body);
++      request.headers['Content-Length'] = contentLength;
++      request.body = body;
++    }
++    request.headers['Host'] = this.endpoint.host;
++
++    return request;
++  }
++
++  signRequest(request, creds, service) {
++    const signer = new AWS.Signers.V4(request, service);
++    signer.addAuthorization(creds, new Date());
++  }
++}
++
++module.exports = HttpAmazonESConnector;
+diff --git a/src/plugins/data_source/server/legacy/http-aws-es/src/node.js b/src/plugins/data_source/server/legacy/http-aws-es/src/node.js
+new file mode 100644
+index 0000000000..38a061b5ea
+--- /dev/null
++++ b/src/plugins/data_source/server/legacy/http-aws-es/src/node.js
+@@ -0,0 +1,66 @@
++/*
++ * Copyright OpenSearch Contributors
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++// This is copy of https://github.com/TheDeveloper/http-aws-es/blob/master/src/node.js
++const AWS = require('aws-sdk');
++const zlib = require('zlib');
++
++class NodeHttpClient {
++  constructor() {
++    this.client = new AWS.NodeHttpClient();
++  }
++
++  handleRequest(request, httpOptions, cb) {
++    let req;
++    let response;
++    let body;
++    let status;
++    let headers;
++
++    // general clean-up procedure to run after the request
++    // completes, has an error, or is aborted.
++    const cleanUp = (err) => {
++      req && req.removeAllListeners();
++      response && response.removeAllListeners();
++
++      if (err instanceof Error) return cb(err);
++
++      cb(null, body, status, headers);
++    };
++
++    req = this.client.handleRequest(
++      request,
++      httpOptions,
++      (res) => {
++        response = res;
++
++        status = response.statusCode;
++        headers = response.headers;
++        body = '';
++
++        const encoding = (headers['content-encoding'] || '').toLowerCase();
++        if (encoding === 'gzip' || encoding === 'deflate') {
++          response = response.pipe(zlib.createUnzip());
++        }
++
++        response.setEncoding('utf8');
++        response.on('data', function (d) {
++          body += d;
++        });
++
++        response.on('error', cleanUp);
++        response.on('end', cleanUp);
++      },
++      cleanUp
++    );
++
++    req.setNoDelay(true);
++    req.setSocketKeepAlive(true);
++
++    return req;
++  }
++}
++
++module.exports = NodeHttpClient;
+diff --git a/src/plugins/data_source/server/plugin.ts b/src/plugins/data_source/server/plugin.ts
+index 0f3c47be4b..8e9b9cdaa2 100644
+--- a/src/plugins/data_source/server/plugin.ts
++++ b/src/plugins/data_source/server/plugin.ts
+@@ -52,6 +52,18 @@ export class DataSourcePlugin implements Plugin<DataSourcePluginSetup, DataSourc
+ 
+     const config: DataSourcePluginConfigType = await this.config$.pipe(first()).toPromise();
+ 
++    const capabilitiesProvider = () => ({
++      dataSource: {
++        allowedAuthTypes: {
++          showNoAuth: config.authTypes.NoAuthentication.enabled,
++          showUsernamePasswordAuth: config.authTypes.UsernamePassword.enabled,
++          showAWSSigv4: config.authTypes.AWSSigV4.enabled,
++          showTokenExchange: config.authTypes.TokenExchange.enabled,
++        },
++      },
++    });
++    core.capabilities.registerProvider(capabilitiesProvider);
++
+     const cryptographyServiceSetup: CryptographyServiceSetup = this.cryptographyService.setup(
+       config
+     );
+@@ -137,11 +149,11 @@ export class DataSourcePlugin implements Plugin<DataSourcePluginSetup, DataSourc
+             const auditor = auditTrailPromise.then((auditTrail) => auditTrail.asScoped(req));
+ 
+             this.logAuditMessage(auditor, dataSourceId, req);
+-
+             return dataSourceService.getDataSourceClient({
+               dataSourceId,
+               savedObjects: context.core.savedObjects.client,
+               cryptography,
++              request: req,
+             });
+           },
+           legacy: {
+@@ -150,6 +162,7 @@ export class DataSourcePlugin implements Plugin<DataSourcePluginSetup, DataSourc
+                 dataSourceId,
+                 savedObjects: context.core.savedObjects.client,
+                 cryptography,
++                request: req,
+               });
+             },
+           },
+diff --git a/src/plugins/data_source/server/routes/test_connection.ts b/src/plugins/data_source/server/routes/test_connection.ts
+index cba42517e5..c5774199f8 100644
+--- a/src/plugins/data_source/server/routes/test_connection.ts
++++ b/src/plugins/data_source/server/routes/test_connection.ts
+@@ -29,6 +29,7 @@ export const registerTestConnectionRoute = (
+                   schema.literal(AuthType.UsernamePasswordType),
+                   schema.literal(AuthType.NoAuth),
+                   schema.literal(AuthType.SigV4),
++                  schema.literal(AuthType.TokenExchange),
+                 ]),
+                 credentials: schema.maybe(
+                   schema.oneOf([
+@@ -40,10 +41,10 @@ export const registerTestConnectionRoute = (
+                       region: schema.string(),
+                       accessKey: schema.string(),
+                       secretKey: schema.string(),
+-                      service: schema.oneOf([
+-                        schema.literal(SigV4ServiceName.OpenSearch),
+-                        schema.literal(SigV4ServiceName.OpenSearchServerless),
+-                      ]),
++                    }),
++                    schema.object({
++                      region: schema.string(),
++                      roleARN: schema.string(),
+                     }),
+                   ])
+                 ),
+@@ -63,6 +64,7 @@ export const registerTestConnectionRoute = (
+             cryptography,
+             dataSourceId,
+             testClientDataSourceAttr: dataSourceAttr as DataSourceAttributes,
++            request,
+           }
+         );
+ 
+diff --git a/src/plugins/data_source/server/saved_objects/data_source_saved_objects_client_wrapper.ts b/src/plugins/data_source/server/saved_objects/data_source_saved_objects_client_wrapper.ts
+index 12d60b8da5..87b9052c56 100644
+--- a/src/plugins/data_source/server/saved_objects/data_source_saved_objects_client_wrapper.ts
++++ b/src/plugins/data_source/server/saved_objects/data_source_saved_objects_client_wrapper.ts
+@@ -25,6 +25,7 @@ import {
+ } from '../../common/data_sources';
+ import { EncryptionContext, CryptographyServiceSetup } from '../cryptography_service';
+ import { isValidURL } from '../util/endpoint_validator';
++import { TokenExchangeContent } from '../../common/data_sources/types';
+ 
+ /**
+  * Describes the Credential Saved Objects Client Wrapper class,
+@@ -169,6 +170,11 @@ export class DataSourceSavedObjectsClientWrapper {
+           ...attributes,
+           auth: await this.encryptSigV4Credential(auth, { endpoint }),
+         };
++      case AuthType.TokenExchange:
++        return {
++          ...attributes,
++          auth,
++        };
+       default:
+         throw SavedObjectsErrorHelpers.createBadRequestError(`Invalid auth type: '${auth.type}'`);
+     }
+@@ -237,6 +243,8 @@ export class DataSourceSavedObjectsClientWrapper {
+           }
+           return attributes;
+         }
++      case AuthType.TokenExchange:
++        return attributes;
+       default:
+         throw SavedObjectsErrorHelpers.createBadRequestError(`Invalid credentials type: '${type}'`);
+     }
+@@ -327,6 +335,27 @@ export class DataSourceSavedObjectsClientWrapper {
+           );
+         }
+         break;
++      case AuthType.TokenExchange:
++        if (!credentials) {
++          throw SavedObjectsErrorHelpers.createBadRequestError(
++            '"auth.credentials" attribute is required'
++          );
++        }
++
++        const { region: domainRegion, roleARN } = credentials as TokenExchangeContent;
++
++        if (!roleARN) {
++          throw SavedObjectsErrorHelpers.createBadRequestError(
++            '"auth.credentials.roleARN" attribute is required'
++          );
++        }
++
++        if (!domainRegion) {
++          throw SavedObjectsErrorHelpers.createBadRequestError(
++            '"auth.credentials.region" attribute is required'
++          );
++        }
++        break;
+       default:
+         throw SavedObjectsErrorHelpers.createBadRequestError(`Invalid auth type: '${type}'`);
+     }
+@@ -357,6 +386,7 @@ export class DataSourceSavedObjectsClientWrapper {
+ 
+     switch (auth.type) {
+       case AuthType.NoAuth:
++      case AuthType.TokenExchange:
+         // Signing the data source with existing endpoint
+         encryptionContext = { endpoint };
+         break;
+diff --git a/src/plugins/data_source/server/types.ts b/src/plugins/data_source/server/types.ts
+index 68a840ebbb..045ef01110 100644
+--- a/src/plugins/data_source/server/types.ts
++++ b/src/plugins/data_source/server/types.ts
+@@ -6,6 +6,7 @@
+ import {
+   LegacyCallAPIOptions,
+   OpenSearchClient,
++  OpenSearchDashboardsRequest,
+   SavedObjectsClientContract,
+ } from 'src/core/server';
+ import { DataSourceAttributes } from '../common/data_sources';
+@@ -27,6 +28,8 @@ export interface DataSourceClientParams {
+   dataSourceId?: string;
+   // required when creating test client
+   testClientDataSourceAttr?: DataSourceAttributes;
++  // to read id token from request header
++  request: OpenSearchDashboardsRequest;
+ }
+ 
+ export interface DataSourcePluginRequestContext {
+diff --git a/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.test.tsx b/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.test.tsx
+index ad1d02c87d..60640307ea 100644
+--- a/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.test.tsx
++++ b/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.test.tsx
+@@ -4,7 +4,7 @@
+  */
+ 
+ import React from 'react';
+-import { mockManagementPlugin } from '../../../../mocks';
++import { mockManagementPlugin, mockDefaultAllowedAuthTypes } from '../../../../mocks';
+ import { mount, ReactWrapper } from 'enzyme';
+ import { wrapWithIntl } from 'test_utils/enzyme_helpers';
+ import { OpenSearchDashboardsContextProvider } from '../../../../../../opensearch_dashboards_react/public';
+@@ -19,6 +19,9 @@ const endpointIdentifier = '[data-test-subj="createDataSourceFormEndpointField"]
+ const authTypeIdentifier = '[data-test-subj="createDataSourceFormAuthTypeSelect"]';
+ const usernameIdentifier = '[data-test-subj="createDataSourceFormUsernameField"]';
+ const passwordIdentifier = '[data-test-subj="createDataSourceFormPasswordField"]';
++const regionIdentifier = '[data-test-subj="createDataSourceFormRegionField"]';
++const roleArnIdentifier = '[data-test-subj="createDataSourceFormRoleArnField"]';
++
+ const createButtonIdentifier = '[data-test-subj="createDataSourceButton"]';
+ const testConnectionButtonIdentifier = '[data-test-subj="createDataSourceTestConnectionButton"]';
+ 
+@@ -68,6 +71,7 @@ describe('Datasource Management: Create Datasource form', () => {
+           handleSubmit={mockSubmitHandler}
+           handleCancel={mockCancelHandler}
+           existingDatasourceNamesList={['dup20']}
++          allowedAuthTypes={mockDefaultAllowedAuthTypes}
+         />
+       ),
+       {
+@@ -224,4 +228,50 @@ describe('Datasource Management: Create Datasource form', () => {
+     // @ts-ignore
+     expect(component.find(passwordIdentifier).first().props().isInvalid).toBe(false);
+   });
++
++  test('should create data source with Token Exchange when all fields are valid', () => {
++    /* set form fields */
++    setAuthTypeValue(authTypeIdentifier, AuthType.TokenExchange);
++    changeTextFieldValue(titleIdentifier, 'test');
++    changeTextFieldValue(descriptionIdentifier, 'test');
++    changeTextFieldValue(endpointIdentifier, 'https://test.com');
++    changeTextFieldValue(regionIdentifier, 'region1');
++    changeTextFieldValue(roleArnIdentifier, 'test-role');
++
++    findTestSubject(component, 'createDataSourceTestConnectionButton').simulate('click');
++
++    findTestSubject(component, 'createDataSourceButton').simulate('click');
++    expect(mockTestConnectionHandler).toHaveBeenCalled();
++    expect(mockSubmitHandler).toHaveBeenCalled(); // should call submit as all fields are valid
++  });
++
++  test('should validate region as required field when Token Exchage is selected', () => {
++    setAuthTypeValue(authTypeIdentifier, AuthType.TokenExchange);
++    /* Validate empty region */
++    changeTextFieldValue(regionIdentifier, '');
++    blurOnField(regionIdentifier);
++    // @ts-ignore
++    expect(component.find(regionIdentifier).first().props().isInvalid).toBe(true);
++
++    /* Validate valid region */
++    changeTextFieldValue(regionIdentifier, 'region1');
++    blurOnField(regionIdentifier);
++    // @ts-ignore
++    expect(component.find(regionIdentifier).first().props().isInvalid).toBe(false);
++  });
++
++  test('should validate roleARN as required field when Token Exchage is selected', () => {
++    setAuthTypeValue(authTypeIdentifier, AuthType.TokenExchange);
++    /* Validate empty role arn */
++    changeTextFieldValue(roleArnIdentifier, '');
++    blurOnField(roleArnIdentifier);
++    // @ts-ignore
++    expect(component.find(roleArnIdentifier).first().props().isInvalid).toBe(true);
++
++    /* Validate valid role arn */
++    changeTextFieldValue(roleArnIdentifier, 'test-role');
++    blurOnField(roleArnIdentifier);
++    // @ts-ignore
++    expect(component.find(roleArnIdentifier).first().props().isInvalid).toBe(false);
++  });
+ });
+diff --git a/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.tsx b/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.tsx
+index 3107ee8400..9f1885d4bb 100644
+--- a/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.tsx
++++ b/src/plugins/data_source_management/public/components/create_data_source_wizard/components/create_form/create_data_source_form.tsx
+@@ -29,12 +29,14 @@ import {
+   DataSourceManagementContextValue,
+   UsernamePasswordTypedContent,
+   sigV4ServiceOptions,
++  TokenExchangeContent,
+ } from '../../../../types';
+ import { Header } from '../header';
+ import { context as contextType } from '../../../../../../opensearch_dashboards_react/public';
+ import {
+   CreateEditDataSourceValidation,
+   defaultValidation,
++  getDefaultAuthType,
+   isTitleValid,
+   performDataSourceFormValidation,
+ } from '../../../validation';
+@@ -44,6 +46,7 @@ export interface CreateDataSourceProps {
+   existingDatasourceNamesList: string[];
+   handleSubmit: (formValues: DataSourceAttributes) => void;
+   handleTestConnection: (formValues: DataSourceAttributes) => void;
++  allowedAuthTypes: Record<string, boolean>;
+   handleCancel: () => void;
+ }
+ export interface CreateDataSourceState {
+@@ -55,7 +58,7 @@ export interface CreateDataSourceState {
+   endpoint: string;
+   auth: {
+     type: AuthType;
+-    credentials: UsernamePasswordTypedContent | SigV4Content;
++    credentials: UsernamePasswordTypedContent | SigV4Content | TokenExchangeContent | undefined;
+   };
+ }
+ 
+@@ -74,13 +77,7 @@ export class CreateDataSourceForm extends React.Component<
+       title: '',
+       description: '',
+       endpoint: '',
+-      auth: {
+-        type: AuthType.UsernamePasswordType,
+-        credentials: {
+-          username: '',
+-          password: '',
+-        },
+-      },
++      auth: getDefaultAuthType(this.props.allowedAuthTypes),
+     };
+   }
+ 
+@@ -262,6 +259,53 @@ export class CreateDataSourceForm extends React.Component<
+     });
+   };
+ 
++  onChangeOpenSearchRegion = (e: { target: { value: any } }) => {
++    this.setState({
++      auth: {
++        ...this.state.auth,
++        credentials: {
++          ...this.state.auth.credentials,
++          region: e.target.value,
++        } as TokenExchangeContent,
++      },
++    });
++  };
++
++  validateOpenSearchRegion = () => {
++    const isValid = !!this.state.auth.credentials.region?.trim().length;
++    this.setState({
++      formErrorsByField: {
++        ...this.state.formErrorsByField,
++        tokenExchangeCredentials: {
++          ...this.state.formErrorsByField.tokenExchangeCredentials,
++          region: isValid ? [] : [''],
++        },
++      },
++    });
++  };
++
++  onChangeRoleArn = (e: { target: { value: any } }) => {
++    this.setState({
++      auth: {
++        ...this.state.auth,
++        credentials: { ...this.state.auth.credentials, roleARN: e.target.value },
++      },
++    });
++  };
++
++  validateRoleArn = () => {
++    const isValid = !!this.state.auth.credentials.roleARN;
++    this.setState({
++      formErrorsByField: {
++        ...this.state.formErrorsByField,
++        tokenExchangeCredentials: {
++          ...this.state.formErrorsByField.tokenExchangeCredentials,
++          roleArn: isValid ? [] : [''],
++        },
++      },
++    });
++  };
++
+   onClickCreateNewDataSource = () => {
+     if (this.isFormValid()) {
+       const formValues: DataSourceAttributes = this.getFormValues();
+@@ -298,6 +342,12 @@ export class CreateDataSourceForm extends React.Component<
+         service: this.state.auth.credentials.service || SigV4ServiceName.OpenSearch,
+       } as SigV4Content;
+     }
++    if (this.state.auth.type === AuthType.TokenExchange) {
++      credentials = {
++        region: this.state.auth.credentials.region,
++        roleARN: this.state.auth.credentials.roleARN,
++      } as TokenExchangeContent;
++    }
+ 
+     return {
+       title: this.state.title,
+@@ -344,6 +394,30 @@ export class CreateDataSourceForm extends React.Component<
+     );
+   };
+ 
++  /* Render Authentication Description*/
++  renderAuthenticationDescription = (i18nId: string, defaultMessage: string) => {
++    if (this.props.allowedAuthTypes.showNoAuth) {
++      defaultMessage += 'If no authentication is required, choose';
++    }
++    return (
++      <>
++        <EuiFormRow>
++          <EuiText>
++            <FormattedMessage id={i18nId} defaultMessage={defaultMessage} />
++            {this.props.allowedAuthTypes.showNoAuth ?? (
++              <b>
++                <FormattedMessage
++                  id="dataSourcesManagement.createDataSource.noAuthentication"
++                  defaultMessage="No authentication"
++                />
++              </b>
++            )}
++          </EuiText>
++        </EuiFormRow>
++      </>
++    );
++  };
++
+   /* Render create new credentials*/
+   renderCreateNewCredentialsForm = (type: AuthType) => {
+     switch (type) {
+@@ -481,6 +555,53 @@ export class CreateDataSourceForm extends React.Component<
+             </EuiFormRow>
+           </>
+         );
++      case AuthType.TokenExchange:
++        return (
++          <>
++            <EuiFormRow
++              label={i18n.translate('dataSourcesManagement.createDataSource.region', {
++                defaultMessage: 'Region',
++              })}
++              isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.region.length}
++              error={this.state.formErrorsByField.tokenExchangeCredentials.region}
++            >
++              <EuiFieldText
++                placeholder={i18n.translate(
++                  'dataSourcesManagement.createDataSource.regionPlaceholder',
++                  {
++                    defaultMessage: 'AWS Region, e.g. us-west-2',
++                  }
++                )}
++                isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.region.length}
++                value={this.state.auth.credentials.region || ''}
++                onChange={this.onChangeOpenSearchRegion}
++                onBlur={this.validateOpenSearchRegion}
++                data-test-subj="createDataSourceFormRegionField"
++              />
++            </EuiFormRow>
++            <EuiFormRow
++              label={i18n.translate('dataSourcesManagement.createDataSource.roleArn', {
++                defaultMessage: 'IAM role ARN',
++              })}
++              isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.roleArn.length}
++              error={this.state.formErrorsByField.tokenExchangeCredentials.roleArn}
++            >
++              <EuiFieldText
++                placeholder={i18n.translate(
++                  'dataSourcesManagement.createDataSource.roleArnPlaceholder',
++                  {
++                    defaultMessage: 'IAM role ARN',
++                  }
++                )}
++                isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.roleArn.length}
++                value={this.state.auth.credentials.roleARN || ''}
++                onChange={this.onChangeRoleArn}
++                onBlur={this.validateRoleArn}
++                data-test-subj="createDataSourceFormRoleArnField"
++              />
++            </EuiFormRow>
++          </>
++        );
+ 
+       default:
+         break;
+@@ -580,26 +701,16 @@ export class CreateDataSourceForm extends React.Component<
+             )}
+             <EuiSpacer size="m" />
+ 
+-            <EuiFormRow>
+-              <EuiText>
+-                <FormattedMessage
+-                  id="dataSourcesManagement.createDataSource.authenticationMethodDescription"
+-                  defaultMessage="Enter the authentication details to access the endpoint. If no authentication is required, select "
+-                />
+-                <b>
+-                  <FormattedMessage
+-                    id="dataSourcesManagement.createDataSource.noAuthentication"
+-                    defaultMessage="No authentication"
+-                  />
+-                </b>
+-              </EuiText>
+-            </EuiFormRow>
++          {this.renderAuthenticationDescription(
++            'dataSourcesManagement.createDataSource.authenticationMethodDescription',
++            'Provide authentication details require to gain access to the endpoint.'
++          )}
+ 
+             {/* Credential source */}
+             <EuiSpacer size="l" />
+             <EuiFormRow>
+               <EuiSelect
+-                options={credentialSourceOptions}
++                options={credentialSourceOptions(this.props.allowedAuthTypes)}
+                 value={this.state.auth.type}
+                 onChange={(e) => this.onChangeAuthType(e)}
+                 name="Credential"
+@@ -616,6 +727,10 @@ export class CreateDataSourceForm extends React.Component<
+               ? this.renderCreateNewCredentialsForm(this.state.auth.type)
+               : null}
+ 
++          {this.state.auth.type === AuthType.TokenExchange
++            ? this.renderCreateNewCredentialsForm(this.state.auth.type)
++            : null}
++
+             <EuiSpacer size="xl" />
+             <EuiFormRow>
+               <EuiFlexGroup>
+diff --git a/src/plugins/data_source_management/public/components/create_data_source_wizard/create_data_source_wizard.tsx b/src/plugins/data_source_management/public/components/create_data_source_wizard/create_data_source_wizard.tsx
+index 05489ca625..54a64e15d4 100644
+--- a/src/plugins/data_source_management/public/components/create_data_source_wizard/create_data_source_wizard.tsx
++++ b/src/plugins/data_source_management/public/components/create_data_source_wizard/create_data_source_wizard.tsx
+@@ -30,6 +30,7 @@ export const CreateDataSourceWizard: React.FunctionComponent<CreateDataSourceWiz
+     setBreadcrumbs,
+     http,
+     notifications: { toasts },
++    application,
+   } = useOpenSearchDashboards<DataSourceManagementContext>().services;
+ 
+   /* State Variables */
+@@ -118,6 +119,9 @@ export const CreateDataSourceWizard: React.FunctionComponent<CreateDataSourceWiz
+           handleTestConnection={handleTestConnection}
+           handleCancel={() => props.history.push('')}
+           existingDatasourceNamesList={existingDatasourceNamesList}
++          allowedAuthTypes={
++            application.capabilities.dataSource.allowedAuthTypes as Record<string, boolean>
++          }
+         />
+         {isLoading ? <LoadingMask /> : null}
+       </>
+diff --git a/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.test.tsx b/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.test.tsx
+index 41133f6503..2ff2e07c09 100644
+--- a/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.test.tsx
++++ b/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.test.tsx
+@@ -11,6 +11,8 @@ import {
+   mockManagementPlugin,
+   existingDatasourceNamesList,
+   mockDataSourceAttributesWithNoAuth,
++  mockDefaultAllowedAuthTypes,
++  mockDataSourceAttributesWithTokenExchange,
+ } from '../../../../mocks';
+ import { OpenSearchDashboardsContextProvider } from '../../../../../../opensearch_dashboards_react/public';
+ import { EditDataSourceForm } from './edit_data_source_form';
+@@ -27,6 +29,10 @@ const usernameFieldIdentifier = 'datasourceUsername';
+ const usernameFormRowIdentifier = '[data-test-subj="editDatasourceUsernameFormRow"]';
+ const passwordFieldIdentifier = '[data-test-subj="updateDataSourceFormPasswordField"]';
+ const updatePasswordBtnIdentifier = '[data-test-subj="editDatasourceUpdatePasswordBtn"]';
++const regionIdentifier = '[data-test-subj="updateDataSourceFormRegionField"]';
++const roleArnIdentifier = '[data-test-subj="updateDataSourceFormRoleArnField"]';
++const updateBtnIdentifier = '[data-test-subj="datasource-edit-saveButton"]';
++
+ describe('Datasource Management: Edit Datasource Form', () => {
+   const mockedContext = mockManagementPlugin.createDataSourceManagementContext();
+   let component: ReactWrapper<any, Readonly<{}>, React.Component<{}, {}, any>>;
+@@ -68,6 +74,7 @@ describe('Datasource Management: Edit Datasource Form', () => {
+             handleSubmit={mockFn}
+             handleTestConnection={mockFn}
+             displayToastMessage={mockFn}
++            allowedAuthTypes={mockDefaultAllowedAuthTypes}
+           />
+         ),
+         {
+@@ -215,10 +222,8 @@ describe('Datasource Management: Edit Datasource Form', () => {
+             component.find(descriptionFormRowIdentifier).first().props().isInvalid
+           ).toBeUndefined();
+ 
+-          expect(component.find('[data-test-subj="datasource-edit-saveButton"]').exists()).toBe(
+-            true
+-          );
+-          component.find('[data-test-subj="datasource-edit-saveButton"]').first().simulate('click');
++          expect(component.find(updateBtnIdentifier).exists()).toBe(true);
++          component.find(updateBtnIdentifier).first().simulate('click');
+           expect(mockFn).toHaveBeenCalled();
+           resolve();
+         }, 100)
+@@ -237,6 +242,7 @@ describe('Datasource Management: Edit Datasource Form', () => {
+             handleSubmit={mockFn}
+             handleTestConnection={mockFn}
+             displayToastMessage={mockFn}
++            allowedAuthTypes={mockDefaultAllowedAuthTypes}
+           />
+         ),
+         {
+@@ -310,10 +316,8 @@ describe('Datasource Management: Edit Datasource Form', () => {
+             component.find(descriptionFormRowIdentifier).first().props().isInvalid
+           ).toBeUndefined();
+ 
+-          expect(component.find('[data-test-subj="datasource-edit-saveButton"]').exists()).toBe(
+-            true
+-          );
+-          component.find('[data-test-subj="datasource-edit-saveButton"]').first().simulate('click');
++          expect(component.find(updateBtnIdentifier).exists()).toBe(true);
++          component.find(updateBtnIdentifier).first().simulate('click');
+           expect(mockFn).toHaveBeenCalled();
+           resolve();
+         }, 100)
+@@ -329,4 +333,106 @@ describe('Datasource Management: Edit Datasource Form', () => {
+       expect(mockFn).toHaveBeenCalled();
+     });
+   });
++
++  describe('Case 3: With Token Exchange', () => {
++    beforeEach(() => {
++      component = mount(
++        wrapWithIntl(
++          <EditDataSourceForm
++            existingDataSource={mockDataSourceAttributesWithTokenExchange}
++            existingDatasourceNamesList={existingDatasourceNamesList}
++            onDeleteDataSource={mockFn}
++            handleSubmit={mockFn}
++            handleTestConnection={mockFn}
++            displayToastMessage={mockFn}
++            allowedAuthTypes={mockDefaultAllowedAuthTypes}
++          />
++        ),
++        {
++          wrappingComponent: OpenSearchDashboardsContextProvider,
++          wrappingComponentProps: {
++            services: mockedContext,
++          },
++        }
++      );
++      component.update();
++    });
++
++    test('should render normally', () => {
++      // @ts-ignore
++      expect(component.find({ name: titleFieldIdentifier }).first().props().value).toBe(
++        mockDataSourceAttributesWithTokenExchange.title
++      );
++      expect(component.find(endpointFieldIdentifier).first().props().disabled).toBe(true);
++    });
++
++    /* functionality */
++    test("should show region and IAM role ARN fields when 'AWS Token Exchange' is selected as the credential type", () => {
++      setAuthTypeValue(authTypeSelectIdentifier, AuthType.TokenExchange);
++      component.update();
++      expect(component.find(regionIdentifier).exists()).toBe(true);
++      expect(component.find(roleArnIdentifier).exists()).toBe(true);
++    });
++
++    /* validation - Region */
++    test('should validate region as required field', () => {
++      setAuthTypeValue(authTypeSelectIdentifier, AuthType.TokenExchange);
++      component.update();
++
++      /* Validate empty region - required */
++      updateInputFieldAndBlur(component, regionIdentifier, '', true);
++      // @ts-ignore
++      expect(component.find(regionIdentifier).first().props().isInvalid).toBe(true);
++
++      /* change to original username */
++      updateInputFieldAndBlur(component, regionIdentifier, 'region1', true);
++      // @ts-ignore
++      expect(component.find(regionIdentifier).first().props().isInvalid).toBe(false);
++    });
++
++    /* validation - IAM Role arn */
++    test('should validate role arn as required field', () => {
++      setAuthTypeValue(authTypeSelectIdentifier, AuthType.TokenExchange);
++      component.update();
++
++      /* Validate empty role arn - required */
++      updateInputFieldAndBlur(component, roleArnIdentifier, '', true);
++      // @ts-ignore
++      expect(component.find(roleArnIdentifier).first().props().isInvalid).toBe(true);
++
++      /* change to original rolearn */
++      updateInputFieldAndBlur(component, roleArnIdentifier, 'test-role', true);
++      // @ts-ignore
++      expect(component.find(roleArnIdentifier).first().props().isInvalid).toBe(false);
++    });
++
++    /* Save Changes */
++    test('should update the form with TokenExchange on click save changes', async () => {
++      await new Promise((resolve) =>
++        setTimeout(() => {
++          updateInputFieldAndBlur(component, descriptionFieldIdentifier, '');
++          expect(
++            // @ts-ignore
++            component.find(descriptionFormRowIdentifier).first().props().isInvalid
++          ).toBeUndefined();
++          resolve();
++        }, 100)
++      );
++      await new Promise((resolve) =>
++        setTimeout(() => {
++          /* Updated description*/
++          updateInputFieldAndBlur(component, descriptionFieldIdentifier, 'testDescription');
++          expect(
++            // @ts-ignore
++            component.find(descriptionFormRowIdentifier).first().props().isInvalid
++          ).toBeUndefined();
++
++          expect(component.find(updateBtnIdentifier).exists()).toBe(true);
++          component.find(updateBtnIdentifier).first().simulate('click');
++          expect(mockFn).toHaveBeenCalled();
++          resolve();
++        }, 100)
++      );
++    });
++  });
+ });
+diff --git a/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.tsx b/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.tsx
+index e05813ca6f..2a5e5904be 100644
+--- a/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.tsx
++++ b/src/plugins/data_source_management/public/components/edit_data_source/components/edit_form/edit_data_source_form.tsx
+@@ -33,6 +33,7 @@ import {
+   sigV4ServiceOptions,
+   ToastMessageItem,
+   UsernamePasswordTypedContent,
++  TokenExchangeContent,
+ } from '../../../../types';
+ import { context as contextType } from '../../../../../../opensearch_dashboards_react/public';
+ import {
+@@ -51,6 +52,7 @@ export interface EditDataSourceProps {
+   handleTestConnection: (formValues: DataSourceAttributes) => Promise<void>;
+   onDeleteDataSource?: () => Promise<void>;
+   displayToastMessage: (info: ToastMessageItem) => void;
++  allowedAuthTypes: Record<string, boolean>;
+ }
+ export interface EditDataSourceState {
+   formErrorsByField: CreateEditDataSourceValidation;
+@@ -59,7 +61,7 @@ export interface EditDataSourceState {
+   endpoint: string;
+   auth: {
+     type: AuthType;
+-    credentials: UsernamePasswordTypedContent | SigV4Content;
++    credentials: UsernamePasswordTypedContent | SigV4Content | TokenExchangeContent | undefined;
+   };
+   showUpdatePasswordModal: boolean;
+   showUpdateAwsCredentialModal: boolean;
+@@ -88,6 +90,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+           region: '',
+           accessKey: '',
+           secretKey: '',
++          roleARN: '',
+         },
+       },
+       showUpdatePasswordModal: false,
+@@ -113,6 +116,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+       const authTypeCheckResults = {
+         isUserNamePassword: auth.type === AuthType.UsernamePasswordType,
+         isSigV4: auth.type === AuthType.SigV4,
++        isTokenExchange: auth.type === AuthType.TokenExchange,
+       };
+ 
+       this.setState({
+@@ -127,9 +131,13 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+             service: authTypeCheckResults.isSigV4
+               ? auth.credentials?.service || SigV4ServiceName.OpenSearch
+               : '',
+-            region: authTypeCheckResults.isSigV4 ? auth.credentials!.region : '',
++            region:
++              authTypeCheckResults.isSigV4 || authTypeCheckResults.isTokenExchange
++                ? auth.credentials!.region
++                : '',
+             accessKey: authTypeCheckResults.isSigV4 ? this.maskedPassword : '',
+             secretKey: authTypeCheckResults.isSigV4 ? this.maskedPassword : '',
++            roleARN: authTypeCheckResults.isTokenExchange ? auth.credentials?.roleARN : '',
+           },
+         },
+       });
+@@ -319,6 +327,56 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+     });
+   };
+ 
++  onChangeOpenSearchRegion = (e: { target: { value: any } }) => {
++    this.setState({
++      auth: {
++        ...this.state.auth,
++        credentials: {
++          ...this.state.auth.credentials,
++          region: e.target.value,
++        } as TokenExchangeContent,
++      },
++    });
++  };
++
++  validateOpenSearchRegion = () => {
++    const isValid = !!this.state.auth.credentials.region?.trim().length;
++    this.setState({
++      formErrorsByField: {
++        ...this.state.formErrorsByField,
++        tokenExchangeCredentials: {
++          ...this.state.formErrorsByField.tokenExchangeCredentials,
++          region: isValid ? [] : [''],
++        },
++      },
++    });
++  };
++
++  onChangeRoleArn = (e: { target: { value: any } }) => {
++    this.setState({
++      auth: {
++        ...this.state.auth,
++        credentials: {
++          ...this.state.auth.credentials,
++          roleARN: e.target.value,
++        } as TokenExchangeContent,
++      },
++    });
++  };
++
++  validateRoleArn = () => {
++    const isValid = !!this.state.auth.credentials?.roleARN;
++    this.setState({
++      formErrorsByField: {
++        ...this.state.formErrorsByField,
++        tokenExchangeCredentials: {
++          ...this.state.formErrorsByField.tokenExchangeCredentials,
++          roleArn: isValid ? [] : [''],
++        },
++      },
++    });
++  };
++
+   onClickUpdateDataSource = async () => {
+     if (this.isFormValid()) {
+       // update data source endpoint is currently not supported/allowed
+@@ -335,6 +393,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+         case AuthType.SigV4:
+           delete formValues.auth.credentials?.username;
+           delete formValues.auth.credentials?.password;
++          delete formValues.auth.credentials?.roleARN;
+           /* Remove access key and secret key if previously & currently SigV4 auth method is selected*/
+           if (this.props.existingDataSource.auth.type === this.state.auth.type) {
+             delete formValues.auth.credentials?.accessKey;
+@@ -345,10 +404,16 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+           delete formValues.auth.credentials?.accessKey;
+           delete formValues.auth.credentials?.secretKey;
+           delete formValues.auth.credentials?.region;
++          delete formValues.auth.credentials?.roleARN;
+           /* Remove password if previously & currently username & password auth method is selected*/
+           if (this.props.existingDataSource.auth.type === this.state.auth.type)
+             delete formValues.auth.credentials?.password;
+           break;
++        case AuthType.TokenExchange:
++          delete formValues.auth.credentials?.username;
++          delete formValues.auth.credentials?.password;
++          delete formValues.auth.credentials?.accessKey;
++          delete formValues.auth.credentials?.secretKey;
+         default:
+           break;
+       }
+@@ -397,6 +462,12 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+           secretKey: isNewCredential ? this.state.auth.credentials?.secretKey : '',
+         } as SigV4Content;
+         break;
++      case AuthType.TokenExchange:
++        credentials = {
++          region: this.state.auth.credentials?.region,
++          roleARN: this.state.auth.credentials?.roleARN,
++        } as TokenExchangeContent;
++        break;
+       case AuthType.NoAuth:
+         credentials = undefined;
+         break;
+@@ -773,7 +844,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+           })}
+         >
+           <EuiSelect
+-            options={credentialSourceOptions}
++            options={credentialSourceOptions(this.props.allowedAuthTypes)}
+             value={this.state.auth.type}
+             onChange={this.onChangeAuthType}
+             name="Credential"
+@@ -793,6 +864,8 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+         return this.renderUsernamePasswordFields();
+       case AuthType.SigV4:
+         return this.renderSigV4ContentFields();
++      case AuthType.TokenExchange:
++        return this.renderTokenExchangeContentFields();
+       default:
+         return null;
+     }
+@@ -964,6 +1037,55 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+     );
+   };
+ 
++  renderTokenExchangeContentFields = () => {
++    return (
++      <>
++        <EuiFormRow
++          label={i18n.translate('dataSourcesManagement.createDataSource.region', {
++            defaultMessage: 'Region',
++          })}
++          isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.region.length}
++          error={this.state.formErrorsByField.tokenExchangeCredentials.region}
++        >
++          <EuiFieldText
++            placeholder={i18n.translate(
++              'dataSourcesManagement.createDataSource.regionPlaceholder',
++              {
++                defaultMessage: 'AWS Region, e.g. us-west-2',
++              }
++            )}
++            isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.region.length}
++            value={this.state.auth.credentials?.region || ''}
++            onChange={this.onChangeOpenSearchRegion}
++            onBlur={this.validateOpenSearchRegion}
++            data-test-subj="updateDataSourceFormRegionField"
++          />
++        </EuiFormRow>
++        <EuiFormRow
++          label={i18n.translate('dataSourcesManagement.createDataSource.roleArn', {
++            defaultMessage: 'IAM role ARN',
++          })}
++          isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.roleArn.length}
++          error={this.state.formErrorsByField.tokenExchangeCredentials.roleArn}
++        >
++          <EuiFieldText
++            placeholder={i18n.translate(
++              'dataSourcesManagement.createDataSource.roleArnPlaceholder',
++              {
++                defaultMessage: 'IAM role ARN',
++              }
++            )}
++            isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.roleArn.length}
++            value={this.state.auth.credentials?.roleARN || ''}
++            onChange={this.onChangeRoleArn}
++            onBlur={this.validateRoleArn}
++            data-test-subj="updateDataSourceFormRoleArnField"
++          />
++        </EuiFormRow>
++      </>
++    );
++  };
++
+   didFormValuesChange = () => {
+     const formValues: DataSourceAttributes = {
+       title: this.state.title,
+@@ -978,12 +1100,17 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+       auth.type === AuthType.UsernamePasswordType &&
+       formValues.auth.credentials?.username !== auth.credentials?.username;
+     const isAuthTypeSigV4Unchanged =
+-      auth.type === formValues.auth.type && auth.type === AuthType.SigV4;
++      auth.type === formValues.auth.type &&
++      (auth.type === AuthType.SigV4 || auth.type === AuthType.TokenExchange);
+     const isRegionChanged =
+       isAuthTypeSigV4Unchanged && formValues.auth.credentials?.region !== auth.credentials?.region;
+     const isServiceNameChanged =
+       isAuthTypeSigV4Unchanged &&
+       formValues.auth.credentials?.service !== auth.credentials?.service;
++    const isRoleArnChanged =
++      auth.type === formValues.auth.type &&
++      auth.type === AuthType.TokenExchange &&
++      formValues.auth.credentials?.roleARN !== auth.credentials?.roleARN;
+ 
+     if (
+       formValues.title !== title ||
+@@ -991,6 +1118,7 @@ export class EditDataSourceForm extends React.Component<EditDataSourceProps, Edi
+       formValues.auth.type !== auth.type ||
+       isUsernameChanged ||
+       isRegionChanged ||
++      isRoleArnChanged ||
+       isServiceNameChanged
+     ) {
+       this.setState({ showUpdateOptions: true });
+diff --git a/src/plugins/data_source_management/public/components/edit_data_source/edit_data_source.tsx b/src/plugins/data_source_management/public/components/edit_data_source/edit_data_source.tsx
+index bc2bac5b66..d22f1d5892 100644
+--- a/src/plugins/data_source_management/public/components/edit_data_source/edit_data_source.tsx
++++ b/src/plugins/data_source_management/public/components/edit_data_source/edit_data_source.tsx
+@@ -42,6 +42,7 @@ export const EditDataSource: React.FunctionComponent<RouteComponentProps<{ id: s
+     setBreadcrumbs,
+     http,
+     notifications: { toasts },
++    application,
+   } = useOpenSearchDashboards<DataSourceManagementContext>().services;
+   const dataSourceID: string = props.match.params.id;
+ 
+@@ -132,6 +133,9 @@ export const EditDataSource: React.FunctionComponent<RouteComponentProps<{ id: s
+             handleSubmit={handleSubmit}
+             displayToastMessage={handleDisplayToastMessage}
+             handleTestConnection={handleTestConnection}
++            allowedAuthTypes={
++              application.capabilities.dataSource.allowedAuthTypes as Record<string, boolean>
++            }
+           />
+         ) : null}
+         {isLoading || !dataSource?.endpoint ? <LoadingMask /> : null}
+diff --git a/src/plugins/data_source_management/public/components/validation/datasource_form_validation.ts b/src/plugins/data_source_management/public/components/validation/datasource_form_validation.ts
+index aecf6e5173..4273ab2388 100644
+--- a/src/plugins/data_source_management/public/components/validation/datasource_form_validation.ts
++++ b/src/plugins/data_source_management/public/components/validation/datasource_form_validation.ts
+@@ -7,7 +7,12 @@ import { i18n } from '@osd/i18n';
+ import { isValidUrl } from '../utils';
+ import { CreateDataSourceState } from '../create_data_source_wizard/components/create_form/create_data_source_form';
+ import { EditDataSourceState } from '../edit_data_source/components/edit_form/edit_data_source_form';
+-import { AuthType } from '../../types';
++import {
++  AuthType,
++  SigV4Content,
++  TokenExchangeContent,
++  UsernamePasswordTypedContent,
++} from '../../types';
+ 
+ export interface CreateEditDataSourceValidation {
+   title: string[];
+@@ -22,6 +27,10 @@ export interface CreateEditDataSourceValidation {
+     secretKey: string[];
+     service: string[];
+   };
++  tokenExchangeCredentials: {
++    roleArn: string[];
++    region: string[];
++  };
+ }
+ 
+ export const defaultValidation: CreateEditDataSourceValidation = {
+@@ -37,6 +46,44 @@ export const defaultValidation: CreateEditDataSourceValidation = {
+     secretKey: [],
+     service: [],
+   },
++  tokenExchangeCredentials: {
++    roleArn: [],
++    region: [],
++  },
++};
++
++export const getDefaultAuthType = (allowedAuthTypes: Record<string, boolean>) => {
++  if (allowedAuthTypes.showUsernamePasswordAuth) {
++    return {
++      type: AuthType.UsernamePasswordType,
++      credentials: {
++        username: '',
++        password: '',
++      } as UsernamePasswordTypedContent,
++    };
++  } else if (allowedAuthTypes.showAWSSigv4) {
++    return {
++      type: AuthType.SigV4,
++      credentials: {
++        region: '',
++        accessKey: '',
++        secretKey: '',
++      } as SigV4Content,
++    };
++  } else if (allowedAuthTypes.showTokenExchange) {
++    return {
++      type: AuthType.TokenExchange,
++      credentials: {
++        region: '',
++        roleARN: '',
++      } as TokenExchangeContent,
++    };
++  } else {
++    return {
++      type: AuthType.NoAuth,
++      credentials: undefined,
++    };
++  }
+ };
+ 
+ export const isTitleValid = (
+@@ -119,5 +166,18 @@ export const performDataSourceFormValidation = (
+     }
+   }
+ 
++  /* AWS Token Exchange Content */
++  if (formValues?.auth?.type === AuthType.TokenExchange) {
++    /* IAM role arn */
++    if (!formValues.auth.credentials?.roleARN) {
++      return false;
++    }
++
++    /* Region */
++    if (!formValues.auth.credentials?.region) {
++      return false;
++    }
++  }
++
+   return true;
+ };
+diff --git a/src/plugins/data_source_management/public/mocks.ts b/src/plugins/data_source_management/public/mocks.ts
+index c078247956..ceb5ef0b52 100644
+--- a/src/plugins/data_source_management/public/mocks.ts
++++ b/src/plugins/data_source_management/public/mocks.ts
+@@ -21,15 +21,21 @@ export const docLinks = {
+   },
+ };
+ 
++export const application = {
++  capabilities: {
++    dataSource: {
++      allowedAuthTypes: {
++        showNoAuth: true,
++        showUsernamePasswordAuth: true,
++        showAWSSigv4: true,
++        showTokenExchange: true,
++      },
++    },
++  },
++};
++
+ const createDataSourceManagementContext = () => {
+-  const {
+-    chrome,
+-    application,
+-    savedObjects,
+-    uiSettings,
+-    notifications,
+-    overlays,
+-  } = coreMock.createStart();
++  const { chrome, savedObjects, uiSettings, notifications, overlays } = coreMock.createStart();
+   const { http } = coreMock.createSetup();
+ 
+   return {
+@@ -48,6 +54,7 @@ const createDataSourceManagementContext = () => {
+ export const mockManagementPlugin = {
+   createDataSourceManagementContext,
+   docLinks,
++  application,
+ };
+ 
+ /* Mock data responses - JSON*/
+@@ -155,6 +162,21 @@ export const mockDataSourceAttributesWithNoAuth = {
+     credentials: undefined,
+   },
+ };
++
++export const mockDataSourceAttributesWithTokenExchange = {
++  id: 'test123',
++  title: 'create-test-ds123',
++  description: 'jest testing',
++  endpoint: 'https://test.com',
++  auth: {
++    type: AuthType.TokenExchange,
++    credentials: {
++      region: 'region1',
++      roleARN: 'test-role',
++    },
++  },
++};
++
+ export const getDataSourceByIdWithCredential = {
+   attributes: {
+     id: 'alpha-test',
+@@ -197,3 +219,10 @@ export const mockErrorResponseForSavedObjectsCalls = (
+     throwError(new Error('Error while fetching data sources'))
+   );
+ };
++
++export const mockDefaultAllowedAuthTypes = {
++  showNoAuth: true,
++  showUsernamePasswordAuth: true,
++  showAWSSigv4: true,
++  showTokenExchange: true,
++};
+diff --git a/src/plugins/data_source_management/public/types.ts b/src/plugins/data_source_management/public/types.ts
+index 1bede8fbfc..fa46972424 100644
+--- a/src/plugins/data_source_management/public/types.ts
++++ b/src/plugins/data_source_management/public/types.ts
+@@ -16,6 +16,7 @@ import {
+ import { ManagementAppMountParams } from 'src/plugins/management/public';
+ import { SavedObjectAttributes } from 'src/core/types';
+ import { i18n } from '@osd/i18n';
++import { EuiSelectOption } from '@elastic/eui';
+ import { SigV4ServiceName } from '../../data_source/common/data_sources';
+ import { OpenSearchDashboardsReactContextValue } from '../../opensearch_dashboards_react/public';
+ 
+@@ -56,28 +57,46 @@ export enum AuthType {
+   NoAuth = 'no_auth',
+   UsernamePasswordType = 'username_password',
+   SigV4 = 'sigv4',
++  TokenExchange = 'token_exchange',
+ }
+ 
+-export const credentialSourceOptions = [
+-  {
+-    value: AuthType.NoAuth,
+-    text: i18n.translate('dataSourceManagement.credentialSourceOptions.NoAuthentication', {
+-      defaultMessage: 'No authentication',
+-    }),
+-  },
+-  {
+-    value: AuthType.UsernamePasswordType,
+-    text: i18n.translate('dataSourceManagement.credentialSourceOptions.UsernamePassword', {
+-      defaultMessage: 'Username & Password',
+-    }),
+-  },
+-  {
+-    value: AuthType.SigV4,
+-    text: i18n.translate('dataSourceManagement.credentialSourceOptions.AwsSigV4', {
+-      defaultMessage: 'AWS SigV4',
+-    }),
+-  },
+-];
++export const credentialSourceOptions = (allowedAuthTypes: Record<string, boolean>) => {
++  const authenticationMethods = [
++    allowedAuthTypes.showNoAuth
++      ? {
++          value: AuthType.NoAuth,
++          text: i18n.translate('dataSourceManagement.credentialSourceOptions.NoAuthentication', {
++            defaultMessage: 'No authentication',
++          }),
++        }
++      : '',
++    allowedAuthTypes.showUsernamePasswordAuth
++      ? {
++          value: AuthType.UsernamePasswordType,
++          text: i18n.translate('dataSourceManagement.credentialSourceOptions.UsernamePassword', {
++            defaultMessage: 'Username & Password',
++          }),
++        }
++      : '',
++    allowedAuthTypes.showAWSSigv4
++      ? {
++          value: AuthType.SigV4,
++          text: i18n.translate('dataSourceManagement.credentialSourceOptions.AwsSigV4', {
++            defaultMessage: 'AWS SigV4',
++          }),
++        }
++      : '',
++    allowedAuthTypes.showTokenExchange
++      ? {
++          value: AuthType.TokenExchange,
++          text: i18n.translate('dataSourceManagement.credentialSourceOptions.TokenExchange', {
++            defaultMessage: 'AWS Token Exchange',
++          }),
++        }
++      : '',
++  ];
++  return authenticationMethods.filter((item) => item !== '') as EuiSelectOption[];
++};
+ 
+ export const sigV4ServiceOptions = [
+   {
+@@ -100,7 +119,7 @@ export interface DataSourceAttributes extends SavedObjectAttributes {
+   endpoint?: string;
+   auth: {
+     type: AuthType;
+-    credentials: UsernamePasswordTypedContent | SigV4Content | undefined;
++    credentials: UsernamePasswordTypedContent | SigV4Content | TokenExchangeContent | undefined;
+   };
+ }
+ 
+@@ -115,3 +134,8 @@ export interface SigV4Content extends SavedObjectAttributes {
+   region: string;
+   service?: SigV4ServiceName;
+ }
++
++export interface TokenExchangeContent extends SavedObjectAttributes {
++  region: string;
++  roleARN: string;
++}
+diff --git a/yarn.lock b/yarn.lock
+index 2e559de43b..44e2a0efd4 100644
+--- a/yarn.lock
++++ b/yarn.lock
+@@ -43,6 +43,15 @@
+     "@aws-crypto/raw-rsa-keyring-node" "^3.1.0"
+     tslib "^2.2.0"
+ 
++"@aws-crypto/crc32@3.0.0":
++  version "3.0.0"
++  resolved "https://registry.yarnpkg.com/@aws-crypto/crc32/-/crc32-3.0.0.tgz#07300eca214409c33e3ff769cd5697b57fdd38fa"
++  integrity sha512-IzSgsrxUcsrejQbPVilIKy16kAT52EwB6zSaI+M3xxIhKh5+aldEyvI+z6erM7TCLB2BJsFrtHjp6/4/sr+3dA==
++  dependencies:
++    "@aws-crypto/util" "^3.0.0"
++    "@aws-sdk/types" "^3.222.0"
++    tslib "^1.11.1"
++
+ "@aws-crypto/decrypt-node@^3.1.0":
+   version "3.1.0"
+   resolved "https://registry.yarnpkg.com/@aws-crypto/decrypt-node/-/decrypt-node-3.1.0.tgz#f5d8298a50a2f73f4635770a8ed688df618595cd"
+@@ -74,6 +83,13 @@
+   dependencies:
+     tslib "^2.2.0"
+ 
++"@aws-crypto/ie11-detection@^3.0.0":
++  version "3.0.0"
++  resolved "https://registry.yarnpkg.com/@aws-crypto/ie11-detection/-/ie11-detection-3.0.0.tgz#640ae66b4ec3395cee6a8e94ebcd9f80c24cd688"
++  integrity sha512-341lBBkiY1DfDNKai/wXM3aujNBkXR7tq1URPQDL9wi3AUbI80NR74uF1TXHMm7po1AcnFk8iu2S2IeU/+/A+Q==
++  dependencies:
++    tslib "^1.11.1"
++
+ "@aws-crypto/kms-keyring-node@^3.1.0":
+   version "3.1.0"
+   resolved "https://registry.yarnpkg.com/@aws-crypto/kms-keyring-node/-/kms-keyring-node-3.1.0.tgz#64686da89192392d89036bbb03c64b99326ea77d"
+@@ -149,6 +165,372 @@
+     bn.js "^5.1.1"
+     tslib "^2.2.0"
+ 
++"@aws-crypto/sha256-browser@3.0.0":
++  version "3.0.0"
++  resolved "https://registry.yarnpkg.com/@aws-crypto/sha256-browser/-/sha256-browser-3.0.0.tgz#05f160138ab893f1c6ba5be57cfd108f05827766"
++  integrity sha512-8VLmW2B+gjFbU5uMeqtQM6Nj0/F1bro80xQXCW6CQBWgosFWXTx77aeOF5CAIAmbOK64SdMBJdNr6J41yP5mvQ==
++  dependencies:
++    "@aws-crypto/ie11-detection" "^3.0.0"
++    "@aws-crypto/sha256-js" "^3.0.0"
++    "@aws-crypto/supports-web-crypto" "^3.0.0"
++    "@aws-crypto/util" "^3.0.0"
++    "@aws-sdk/types" "^3.222.0"
++    "@aws-sdk/util-locate-window" "^3.0.0"
++    "@aws-sdk/util-utf8-browser" "^3.0.0"
++    tslib "^1.11.1"
++
++"@aws-crypto/sha256-js@3.0.0", "@aws-crypto/sha256-js@^3.0.0":
++  version "3.0.0"
++  resolved "https://registry.yarnpkg.com/@aws-crypto/sha256-js/-/sha256-js-3.0.0.tgz#f06b84d550d25521e60d2a0e2a90139341e007c2"
++  integrity sha512-PnNN7os0+yd1XvXAy23CFOmTbMaDxgxXtTKHybrJ39Y8kGzBATgBFibWJKH6BhytLI/Zyszs87xCOBNyBig6vQ==
++  dependencies:
++    "@aws-crypto/util" "^3.0.0"
++    "@aws-sdk/types" "^3.222.0"
++    tslib "^1.11.1"
++
++"@aws-crypto/supports-web-crypto@^3.0.0":
++  version "3.0.0"
++  resolved "https://registry.yarnpkg.com/@aws-crypto/supports-web-crypto/-/supports-web-crypto-3.0.0.tgz#5d1bf825afa8072af2717c3e455f35cda0103ec2"
++  integrity sha512-06hBdMwUAb2WFTuGG73LSC0wfPu93xWwo5vL2et9eymgmu3Id5vFAHBbajVWiGhPO37qcsdCap/FqXvJGJWPIg==
++  dependencies:
++    tslib "^1.11.1"
++
++"@aws-crypto/util@^3.0.0":
++  version "3.0.0"
++  resolved "https://registry.yarnpkg.com/@aws-crypto/util/-/util-3.0.0.tgz#1c7ca90c29293f0883468ad48117937f0fe5bfb0"
++  integrity sha512-2OJlpeJpCR48CC8r+uKVChzs9Iungj9wkZrl8Z041DWEWvyIHILYKCPNzJghKsivj+S3mLo6BVc7mBNzdxA46w==
++  dependencies:
++    "@aws-sdk/types" "^3.222.0"
++    "@aws-sdk/util-utf8-browser" "^3.0.0"
++    tslib "^1.11.1"
++
++"@aws-sdk/client-sso@3.427.0":
++  version "3.427.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/client-sso/-/client-sso-3.427.0.tgz#852f0bb00c7bc5e3d3c8751a6ff4e86a1484726f"
++  integrity sha512-sFVFEmsQ1rmgYO1SgrOTxE/MTKpeE4hpOkm1WqhLQK7Ij136vXpjCxjH1JYZiHiUzO1wr9t4ex4dlB5J3VS/Xg==
++  dependencies:
++    "@aws-crypto/sha256-browser" "3.0.0"
++    "@aws-crypto/sha256-js" "3.0.0"
++    "@aws-sdk/middleware-host-header" "3.425.0"
++    "@aws-sdk/middleware-logger" "3.425.0"
++    "@aws-sdk/middleware-recursion-detection" "3.425.0"
++    "@aws-sdk/middleware-user-agent" "3.427.0"
++    "@aws-sdk/region-config-resolver" "3.425.0"
++    "@aws-sdk/types" "3.425.0"
++    "@aws-sdk/util-endpoints" "3.427.0"
++    "@aws-sdk/util-user-agent-browser" "3.425.0"
++    "@aws-sdk/util-user-agent-node" "3.425.0"
++    "@smithy/config-resolver" "^2.0.11"
++    "@smithy/fetch-http-handler" "^2.2.1"
++    "@smithy/hash-node" "^2.0.10"
++    "@smithy/invalid-dependency" "^2.0.10"
++    "@smithy/middleware-content-length" "^2.0.12"
++    "@smithy/middleware-endpoint" "^2.0.10"
++    "@smithy/middleware-retry" "^2.0.13"
++    "@smithy/middleware-serde" "^2.0.10"
++    "@smithy/middleware-stack" "^2.0.4"
++    "@smithy/node-config-provider" "^2.0.13"
++    "@smithy/node-http-handler" "^2.1.6"
++    "@smithy/protocol-http" "^3.0.6"
++    "@smithy/smithy-client" "^2.1.9"
++    "@smithy/types" "^2.3.4"
++    "@smithy/url-parser" "^2.0.10"
++    "@smithy/util-base64" "^2.0.0"
++    "@smithy/util-body-length-browser" "^2.0.0"
++    "@smithy/util-body-length-node" "^2.1.0"
++    "@smithy/util-defaults-mode-browser" "^2.0.13"
++    "@smithy/util-defaults-mode-node" "^2.0.15"
++    "@smithy/util-retry" "^2.0.3"
++    "@smithy/util-utf8" "^2.0.0"
++    tslib "^2.5.0"
++
++"@aws-sdk/client-sts@^3.414.0":
++  version "3.427.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/client-sts/-/client-sts-3.427.0.tgz#839df8e1aa8795ffbffc7f5d79ccbc6a1220ab33"
++  integrity sha512-le2wLJKILyWuRfPz2HbyaNtu5kEki+ojUkTqCU6FPDRrqUvEkaaCBH9Awo/2AtrCfRkiobop8RuTTj6cAnpiJg==
++  dependencies:
++    "@aws-crypto/sha256-browser" "3.0.0"
++    "@aws-crypto/sha256-js" "3.0.0"
++    "@aws-sdk/credential-provider-node" "3.427.0"
++    "@aws-sdk/middleware-host-header" "3.425.0"
++    "@aws-sdk/middleware-logger" "3.425.0"
++    "@aws-sdk/middleware-recursion-detection" "3.425.0"
++    "@aws-sdk/middleware-sdk-sts" "3.425.0"
++    "@aws-sdk/middleware-signing" "3.425.0"
++    "@aws-sdk/middleware-user-agent" "3.427.0"
++    "@aws-sdk/region-config-resolver" "3.425.0"
++    "@aws-sdk/types" "3.425.0"
++    "@aws-sdk/util-endpoints" "3.427.0"
++    "@aws-sdk/util-user-agent-browser" "3.425.0"
++    "@aws-sdk/util-user-agent-node" "3.425.0"
++    "@smithy/config-resolver" "^2.0.11"
++    "@smithy/fetch-http-handler" "^2.2.1"
++    "@smithy/hash-node" "^2.0.10"
++    "@smithy/invalid-dependency" "^2.0.10"
++    "@smithy/middleware-content-length" "^2.0.12"
++    "@smithy/middleware-endpoint" "^2.0.10"
++    "@smithy/middleware-retry" "^2.0.13"
++    "@smithy/middleware-serde" "^2.0.10"
++    "@smithy/middleware-stack" "^2.0.4"
++    "@smithy/node-config-provider" "^2.0.13"
++    "@smithy/node-http-handler" "^2.1.6"
++    "@smithy/protocol-http" "^3.0.6"
++    "@smithy/smithy-client" "^2.1.9"
++    "@smithy/types" "^2.3.4"
++    "@smithy/url-parser" "^2.0.10"
++    "@smithy/util-base64" "^2.0.0"
++    "@smithy/util-body-length-browser" "^2.0.0"
++    "@smithy/util-body-length-node" "^2.1.0"
++    "@smithy/util-defaults-mode-browser" "^2.0.13"
++    "@smithy/util-defaults-mode-node" "^2.0.15"
++    "@smithy/util-retry" "^2.0.3"
++    "@smithy/util-utf8" "^2.0.0"
++    fast-xml-parser "4.2.5"
++    tslib "^2.5.0"
++
++"@aws-sdk/credential-provider-env@3.425.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-env/-/credential-provider-env-3.425.0.tgz#1f5be812aeed558efaebce641e4c030b86875544"
++  integrity sha512-J20etnLvMKXRVi5FK4F8yOCNm2RTaQn5psQTGdDEPWJNGxohcSpzzls8U2KcMyUJ+vItlrThr4qwgpHG3i/N0w==
++  dependencies:
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/property-provider" "^2.0.0"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/credential-provider-ini@3.427.0":
++  version "3.427.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-ini/-/credential-provider-ini-3.427.0.tgz#bf52067ed5ef6971c7785d09bdf3c6aa16afc2b1"
++  integrity sha512-NmH1cO/w98CKMltYec3IrJIIco19wRjATFNiw83c+FGXZ+InJwReqBnruxIOmKTx2KDzd6fwU1HOewS7UjaaaQ==
++  dependencies:
++    "@aws-sdk/credential-provider-env" "3.425.0"
++    "@aws-sdk/credential-provider-process" "3.425.0"
++    "@aws-sdk/credential-provider-sso" "3.427.0"
++    "@aws-sdk/credential-provider-web-identity" "3.425.0"
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/credential-provider-imds" "^2.0.0"
++    "@smithy/property-provider" "^2.0.0"
++    "@smithy/shared-ini-file-loader" "^2.0.6"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/credential-provider-node@3.427.0":
++  version "3.427.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-node/-/credential-provider-node-3.427.0.tgz#f3bd63bc5ab5b897ce67d5960731f48c89ba7520"
++  integrity sha512-wYYbQ57nKL8OfgRbl8k6uXcdnYml+p3LSSfDUAuUEp1HKlQ8lOXFJ3BdLr5qrk7LhpyppSRnWBmh2c3kWa7ANQ==
++  dependencies:
++    "@aws-sdk/credential-provider-env" "3.425.0"
++    "@aws-sdk/credential-provider-ini" "3.427.0"
++    "@aws-sdk/credential-provider-process" "3.425.0"
++    "@aws-sdk/credential-provider-sso" "3.427.0"
++    "@aws-sdk/credential-provider-web-identity" "3.425.0"
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/credential-provider-imds" "^2.0.0"
++    "@smithy/property-provider" "^2.0.0"
++    "@smithy/shared-ini-file-loader" "^2.0.6"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/credential-provider-process@3.425.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-process/-/credential-provider-process-3.425.0.tgz#d5cd231e1732375fc918912f8083c8c45d9dc2ab"
++  integrity sha512-YY6tkLdvtb1Fgofp3b1UWO+5vwS14LJ/smGmuGpSba0V7gFJRdcrJ9bcb9vVgAGuMdjzRJ+bUKlLLtqXkaykEw==
++  dependencies:
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/property-provider" "^2.0.0"
++    "@smithy/shared-ini-file-loader" "^2.0.6"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/credential-provider-sso@3.427.0":
++  version "3.427.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-sso/-/credential-provider-sso-3.427.0.tgz#da54388247c0cf812e024c301a6f188550275850"
++  integrity sha512-c+tXyS/i49erHs4bAp6vKNYeYlyQ0VNMBgoco0LCn1rL0REtHbfhWMnqDLF6c2n3yIWDOTrQu0D73Idnpy16eA==
++  dependencies:
++    "@aws-sdk/client-sso" "3.427.0"
++    "@aws-sdk/token-providers" "3.427.0"
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/property-provider" "^2.0.0"
++    "@smithy/shared-ini-file-loader" "^2.0.6"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/credential-provider-web-identity@3.425.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/credential-provider-web-identity/-/credential-provider-web-identity-3.425.0.tgz#c1587cc39be70db2c828aeab7b68a8245bc86f91"
++  integrity sha512-/0R65TgRzL01JU3SzloivWNwdkbIhr06uY/F5pBHf/DynQqaspKNfdHn6AiozgSVDfwRHFjKBTUy6wvf3QFkuA==
++  dependencies:
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/property-provider" "^2.0.0"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/middleware-host-header@3.425.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/middleware-host-header/-/middleware-host-header-3.425.0.tgz#7bca371e1a5611ec20c06bd7017efa1900c367d0"
++  integrity sha512-E5Gt41LObQ+cr8QnLthwsH3MtVSNXy1AKJMowDr85h0vzqA/FHUkgHyOGntgozzjXT5M0MaSRYxS0xwTR5D4Ew==
++  dependencies:
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/protocol-http" "^3.0.6"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/middleware-logger@3.425.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/middleware-logger/-/middleware-logger-3.425.0.tgz#e45f160b84798365e4acf8a283e9664ee9ee131b"
++  integrity sha512-INE9XWRXx2f4a/r2vOU0tAmgctVp7nEaEasemNtVBYhqbKLZvr9ndLBSgKGgJ8LIcXAoISipaMuFiqIGkFsm7A==
++  dependencies:
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/middleware-recursion-detection@3.425.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/middleware-recursion-detection/-/middleware-recursion-detection-3.425.0.tgz#c348ec16ebb7c357bcb403904c24e8da1914961d"
++  integrity sha512-77gnzJ5b91bgD75L/ugpOyerx6lR3oyS4080X1YI58EzdyBMkDrHM4FbMcY2RynETi3lwXCFzLRyZjWXY1mRlw==
++  dependencies:
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/protocol-http" "^3.0.6"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/middleware-sdk-sts@3.425.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/middleware-sdk-sts/-/middleware-sdk-sts-3.425.0.tgz#a020a04ddb5c6741d43d72afe79c24e6f1bb94b7"
++  integrity sha512-JFojrg76oKAoBknnr9EL5N2aJ1mRCtBqXoZYST58GSx8uYdFQ89qS65VNQ8JviBXzsrCNAn4vDhZ5Ch5E6TxGQ==
++  dependencies:
++    "@aws-sdk/middleware-signing" "3.425.0"
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/middleware-signing@3.425.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/middleware-signing/-/middleware-signing-3.425.0.tgz#fa133b8a76216d0b55558634b09cbe769f16b037"
++  integrity sha512-ZpOfgJHk7ovQ0sSwg3tU4NxFOnz53lJlkJRf7S+wxQALHM0P2MJ6LYBrZaFMVsKiJxNIdZBXD6jclgHg72ZW6Q==
++  dependencies:
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/property-provider" "^2.0.0"
++    "@smithy/protocol-http" "^3.0.6"
++    "@smithy/signature-v4" "^2.0.0"
++    "@smithy/types" "^2.3.4"
++    "@smithy/util-middleware" "^2.0.3"
++    tslib "^2.5.0"
++
++"@aws-sdk/middleware-user-agent@3.427.0":
++  version "3.427.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/middleware-user-agent/-/middleware-user-agent-3.427.0.tgz#a1b7cf9a848dcb4af454922abf5e9714bc4c20aa"
++  integrity sha512-y9HxYsNvnA3KqDl8w1jHeCwz4P9CuBEtu/G+KYffLeAMBsMZmh4SIkFFCO9wE/dyYg6+yo07rYcnnIfy7WA0bw==
++  dependencies:
++    "@aws-sdk/types" "3.425.0"
++    "@aws-sdk/util-endpoints" "3.427.0"
++    "@smithy/protocol-http" "^3.0.6"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/region-config-resolver@3.425.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/region-config-resolver/-/region-config-resolver-3.425.0.tgz#b69cc305a4211c9f96f04ac3a10ff9a736ec13cb"
++  integrity sha512-u7uv/iUOapIJdRgRkO3wnpYsUgV6ponsZJQgVg/8L+n+Vo5PQL5gAcIuAOwcYSKQPFaeK+KbmByI4SyOK203Vw==
++  dependencies:
++    "@smithy/node-config-provider" "^2.0.13"
++    "@smithy/types" "^2.3.4"
++    "@smithy/util-config-provider" "^2.0.0"
++    "@smithy/util-middleware" "^2.0.3"
++    tslib "^2.5.0"
++
++"@aws-sdk/token-providers@3.427.0":
++  version "3.427.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/token-providers/-/token-providers-3.427.0.tgz#d4b9aacda0a8fdd408bb95bf4b8de919df1227b8"
++  integrity sha512-4E5E+4p8lJ69PBY400dJXF06LUHYx5lkKzBEsYqWWhoZcoftrvi24ltIhUDoGVLkrLcTHZIWSdFAWSos4hXqeg==
++  dependencies:
++    "@aws-crypto/sha256-browser" "3.0.0"
++    "@aws-crypto/sha256-js" "3.0.0"
++    "@aws-sdk/middleware-host-header" "3.425.0"
++    "@aws-sdk/middleware-logger" "3.425.0"
++    "@aws-sdk/middleware-recursion-detection" "3.425.0"
++    "@aws-sdk/middleware-user-agent" "3.427.0"
++    "@aws-sdk/types" "3.425.0"
++    "@aws-sdk/util-endpoints" "3.427.0"
++    "@aws-sdk/util-user-agent-browser" "3.425.0"
++    "@aws-sdk/util-user-agent-node" "3.425.0"
++    "@smithy/config-resolver" "^2.0.11"
++    "@smithy/fetch-http-handler" "^2.2.1"
++    "@smithy/hash-node" "^2.0.10"
++    "@smithy/invalid-dependency" "^2.0.10"
++    "@smithy/middleware-content-length" "^2.0.12"
++    "@smithy/middleware-endpoint" "^2.0.10"
++    "@smithy/middleware-retry" "^2.0.13"
++    "@smithy/middleware-serde" "^2.0.10"
++    "@smithy/middleware-stack" "^2.0.4"
++    "@smithy/node-config-provider" "^2.0.13"
++    "@smithy/node-http-handler" "^2.1.6"
++    "@smithy/property-provider" "^2.0.0"
++    "@smithy/protocol-http" "^3.0.6"
++    "@smithy/shared-ini-file-loader" "^2.0.6"
++    "@smithy/smithy-client" "^2.1.9"
++    "@smithy/types" "^2.3.4"
++    "@smithy/url-parser" "^2.0.10"
++    "@smithy/util-base64" "^2.0.0"
++    "@smithy/util-body-length-browser" "^2.0.0"
++    "@smithy/util-body-length-node" "^2.1.0"
++    "@smithy/util-defaults-mode-browser" "^2.0.13"
++    "@smithy/util-defaults-mode-node" "^2.0.15"
++    "@smithy/util-retry" "^2.0.3"
++    "@smithy/util-utf8" "^2.0.0"
++    tslib "^2.5.0"
++
++"@aws-sdk/types@3.425.0", "@aws-sdk/types@^3.222.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/types/-/types-3.425.0.tgz#8d4e94743a69c865a83785a9f3bcfd49945836f7"
++  integrity sha512-6lqbmorwerN4v+J5dqbHPAsjynI0mkEF+blf+69QTaKKGaxBBVaXgqoqul9RXYcK5MMrrYRbQIMd0zYOoy90kA==
++  dependencies:
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/util-endpoints@3.427.0":
++  version "3.427.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/util-endpoints/-/util-endpoints-3.427.0.tgz#09f7f36201ba80c1c669a0f4c506fb93de1e66d4"
++  integrity sha512-rSyiAIFF/EVvity/+LWUqoTMJ0a25RAc9iqx0WZ4tf1UjuEXRRXxZEb+jEZg1bk+pY84gdLdx9z5E+MSJCZxNQ==
++  dependencies:
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/node-config-provider" "^2.0.13"
++    tslib "^2.5.0"
++
++"@aws-sdk/util-locate-window@^3.0.0":
++  version "3.310.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/util-locate-window/-/util-locate-window-3.310.0.tgz#b071baf050301adee89051032bd4139bba32cc40"
++  integrity sha512-qo2t/vBTnoXpjKxlsC2e1gBrRm80M3bId27r0BRB2VniSSe7bL1mmzM+/HFtujm0iAxtPM+aLEflLJlJeDPg0w==
++  dependencies:
++    tslib "^2.5.0"
++
++"@aws-sdk/util-user-agent-browser@3.425.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/util-user-agent-browser/-/util-user-agent-browser-3.425.0.tgz#74d200d461ea2d75a8d4916c230ffe3a20fcb009"
++  integrity sha512-22Y9iMtjGcFjGILR6/xdp1qRezlHVLyXtnpEsbuPTiernRCPk6zfAnK/ATH77r02MUjU057tdxVkd5umUBTn9Q==
++  dependencies:
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/types" "^2.3.4"
++    bowser "^2.11.0"
++    tslib "^2.5.0"
++
++"@aws-sdk/util-user-agent-node@3.425.0":
++  version "3.425.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/util-user-agent-node/-/util-user-agent-node-3.425.0.tgz#847c0d6526a34e174419dcecf0e12cd000158a84"
++  integrity sha512-SIR4F5uQeeVAi8lv4OgRirtdtNi5zeyogTuQgGi9su8F/WP1N6JqxofcwpUY5f8/oJ2UlXr/tx1f09UHfJJzvA==
++  dependencies:
++    "@aws-sdk/types" "3.425.0"
++    "@smithy/node-config-provider" "^2.0.13"
++    "@smithy/types" "^2.3.4"
++    tslib "^2.5.0"
++
++"@aws-sdk/util-utf8-browser@^3.0.0":
++  version "3.259.0"
++  resolved "https://registry.yarnpkg.com/@aws-sdk/util-utf8-browser/-/util-utf8-browser-3.259.0.tgz#3275a6f5eb334f96ca76635b961d3c50259fd9ff"
++  integrity sha512-UvFa/vR+e19XookZF8RzFZBrw2EUkQWxiBW0yYQAhvk3C+QVGl0H3ouca8LDBlBfQKXwmW3huo/59H8rwb1wJw==
++  dependencies:
++    tslib "^2.3.1"
++
+ "@babel/cli@^7.16.0":
+   version "7.17.6"
+   resolved "https://registry.yarnpkg.com/@babel/cli/-/cli-7.17.6.tgz#169e5935f1795f0b62ded5a2accafeedfe5c5363"
+@@ -2884,6 +3266,355 @@
+   resolved "https://registry.yarnpkg.com/@sinonjs/text-encoding/-/text-encoding-0.7.1.tgz#8da5c6530915653f3a1f38fd5f101d8c3f8079c5"
+   integrity sha512-+iTbntw2IZPb/anVDbypzfQa+ay64MW0Zo8aJ8gZPWMMK6/OubMVb6lUPMagqjOPnmtauXnFCACVl3O7ogjeqQ==
+ 
++"@smithy/abort-controller@^2.0.11":
++  version "2.0.11"
++  resolved "https://registry.yarnpkg.com/@smithy/abort-controller/-/abort-controller-2.0.11.tgz#e1d96a2ecbf103d0b075a7456ce3afeeb9f76a87"
++  integrity sha512-MSzE1qR2JNyb7ot3blIOT3O3H0Jn06iNDEgHRaqZUwBgx5EG+VIx24Y21tlKofzYryIOcWpIohLrIIyocD6LMA==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/config-resolver@^2.0.11", "@smithy/config-resolver@^2.0.14":
++  version "2.0.14"
++  resolved "https://registry.yarnpkg.com/@smithy/config-resolver/-/config-resolver-2.0.14.tgz#16163e14053949f5a717be6f5802a7039e5ff4d1"
++  integrity sha512-K1K+FuWQoy8j/G7lAmK85o03O89s2Vvh6kMFmzEmiHUoQCRH1rzbDtMnGNiaMHeSeYJ6y79IyTusdRG+LuWwtg==
++  dependencies:
++    "@smithy/node-config-provider" "^2.1.1"
++    "@smithy/types" "^2.3.5"
++    "@smithy/util-config-provider" "^2.0.0"
++    "@smithy/util-middleware" "^2.0.4"
++    tslib "^2.5.0"
++
++"@smithy/credential-provider-imds@^2.0.0", "@smithy/credential-provider-imds@^2.0.16":
++  version "2.0.16"
++  resolved "https://registry.yarnpkg.com/@smithy/credential-provider-imds/-/credential-provider-imds-2.0.16.tgz#07da7ecd43eff92156ddc54f3b5330bbc128d5cd"
++  integrity sha512-tKa2xF+69TvGxJT+lnJpGrKxUuAZDLYXFhqnPEgnHz+psTpkpcB4QRjHj63+uj83KaeFJdTfW201eLZeRn6FfA==
++  dependencies:
++    "@smithy/node-config-provider" "^2.1.1"
++    "@smithy/property-provider" "^2.0.12"
++    "@smithy/types" "^2.3.5"
++    "@smithy/url-parser" "^2.0.11"
++    tslib "^2.5.0"
++
++"@smithy/eventstream-codec@^2.0.11":
++  version "2.0.11"
++  resolved "https://registry.yarnpkg.com/@smithy/eventstream-codec/-/eventstream-codec-2.0.11.tgz#1ba090ea5dbf956e32d3d0d0986ffb0d0af8c57d"
++  integrity sha512-BQCTjxhCYRZIfXapa2LmZSaH8QUBGwMZw7XRN83hrdixbLjIcj+o549zjkedFS07Ve2TlvWUI6BTzP+nv7snBA==
++  dependencies:
++    "@aws-crypto/crc32" "3.0.0"
++    "@smithy/types" "^2.3.5"
++    "@smithy/util-hex-encoding" "^2.0.0"
++    tslib "^2.5.0"
++
++"@smithy/fetch-http-handler@^2.2.1", "@smithy/fetch-http-handler@^2.2.2":
++  version "2.2.2"
++  resolved "https://registry.yarnpkg.com/@smithy/fetch-http-handler/-/fetch-http-handler-2.2.2.tgz#c698c24ee75b7b8b6ff7bffb7c26ae9b3363d8cc"
++  integrity sha512-K7aRtRuaBjzlk+jWWeyfDTLAmRRvmA4fU8eHUXtjsuEDgi3f356ZE32VD2ssxIH13RCLVZbXMt5h7wHzYiSuVA==
++  dependencies:
++    "@smithy/protocol-http" "^3.0.7"
++    "@smithy/querystring-builder" "^2.0.11"
++    "@smithy/types" "^2.3.5"
++    "@smithy/util-base64" "^2.0.0"
++    tslib "^2.5.0"
++
++"@smithy/hash-node@^2.0.10":
++  version "2.0.11"
++  resolved "https://registry.yarnpkg.com/@smithy/hash-node/-/hash-node-2.0.11.tgz#07d73eefa9ab28e4f03461c6ec0532b85792329d"
++  integrity sha512-PbleVugN2tbhl1ZoNWVrZ1oTFFas/Hq+s6zGO8B9bv4w/StTriTKA9W+xZJACOj9X7zwfoTLbscM+avCB1KqOQ==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++    "@smithy/util-buffer-from" "^2.0.0"
++    "@smithy/util-utf8" "^2.0.0"
++    tslib "^2.5.0"
++
++"@smithy/invalid-dependency@^2.0.10":
++  version "2.0.11"
++  resolved "https://registry.yarnpkg.com/@smithy/invalid-dependency/-/invalid-dependency-2.0.11.tgz#41811da5da9950f52a0491ea532add2b1895349b"
++  integrity sha512-zazq99ujxYv/NOf9zh7xXbNgzoVLsqE0wle8P/1zU/XdhPi/0zohTPKWUzIxjGdqb5hkkwfBkNkl5H+LE0mvgw==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/is-array-buffer@^2.0.0":
++  version "2.0.0"
++  resolved "https://registry.yarnpkg.com/@smithy/is-array-buffer/-/is-array-buffer-2.0.0.tgz#8fa9b8040651e7ba0b2f6106e636a91354ff7d34"
++  integrity sha512-z3PjFjMyZNI98JFRJi/U0nGoLWMSJlDjAW4QUX2WNZLas5C0CmVV6LJ01JI0k90l7FvpmixjWxPFmENSClQ7ug==
++  dependencies:
++    tslib "^2.5.0"
++
++"@smithy/middleware-content-length@^2.0.12":
++  version "2.0.13"
++  resolved "https://registry.yarnpkg.com/@smithy/middleware-content-length/-/middleware-content-length-2.0.13.tgz#eb8195510fac8e2d925e43f270f347d8e2ce038b"
++  integrity sha512-Md2kxWpaec3bXp1oERFPQPBhOXCkGSAF7uc1E+4rkwjgw3/tqAXRtbjbggu67HJdwaif76As8AV6XxbD1HzqTQ==
++  dependencies:
++    "@smithy/protocol-http" "^3.0.7"
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/middleware-endpoint@^2.0.10":
++  version "2.0.11"
++  resolved "https://registry.yarnpkg.com/@smithy/middleware-endpoint/-/middleware-endpoint-2.0.11.tgz#c3c380ef13c43ee7443ebb4b3e2b6bb26464ff87"
++  integrity sha512-mCugsvB15up6fqpzUEpMT4CuJmFkEI+KcozA7QMzYguXCaIilyMKsyxgamwmr+o7lo3QdjN0//XLQ9bWFL129g==
++  dependencies:
++    "@smithy/middleware-serde" "^2.0.11"
++    "@smithy/types" "^2.3.5"
++    "@smithy/url-parser" "^2.0.11"
++    "@smithy/util-middleware" "^2.0.4"
++    tslib "^2.5.0"
++
++"@smithy/middleware-retry@^2.0.13":
++  version "2.0.16"
++  resolved "https://registry.yarnpkg.com/@smithy/middleware-retry/-/middleware-retry-2.0.16.tgz#f87401a01317de351df5228e4591961d04663607"
++  integrity sha512-Br5+0yoiMS0ugiOAfJxregzMMGIRCbX4PYo1kDHtLgvkA/d++aHbnHB819m5zOIAMPvPE7AThZgcsoK+WOsUTA==
++  dependencies:
++    "@smithy/node-config-provider" "^2.1.1"
++    "@smithy/protocol-http" "^3.0.7"
++    "@smithy/service-error-classification" "^2.0.4"
++    "@smithy/types" "^2.3.5"
++    "@smithy/util-middleware" "^2.0.4"
++    "@smithy/util-retry" "^2.0.4"
++    tslib "^2.5.0"
++    uuid "^8.3.2"
++
++"@smithy/middleware-serde@^2.0.10", "@smithy/middleware-serde@^2.0.11":
++  version "2.0.11"
++  resolved "https://registry.yarnpkg.com/@smithy/middleware-serde/-/middleware-serde-2.0.11.tgz#89c4433b9b4077e2f71f436cd4f97d613e2cf3bd"
++  integrity sha512-NuxnjMyf4zQqhwwdh0OTj5RqpnuT6HcH5Xg5GrPijPcKzc2REXVEVK4Yyk8ckj8ez1XSj/bCmJ+oNjmqB02GWA==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/middleware-stack@^2.0.4", "@smithy/middleware-stack@^2.0.5":
++  version "2.0.5"
++  resolved "https://registry.yarnpkg.com/@smithy/middleware-stack/-/middleware-stack-2.0.5.tgz#43cd8aa7141b23dfbb64dff9ead8a3983d3acc5c"
++  integrity sha512-bVQU/rZzBY7CbSxIrDTGZYnBWKtIw+PL/cRc9B7etZk1IKSOe0NvKMJyWllfhfhrTeMF6eleCzOihIQympAvPw==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/node-config-provider@^2.0.13", "@smithy/node-config-provider@^2.1.1":
++  version "2.1.1"
++  resolved "https://registry.yarnpkg.com/@smithy/node-config-provider/-/node-config-provider-2.1.1.tgz#34c861b95a4e1b66a2dc1d1aecc2bca08466bd5e"
++  integrity sha512-1lF6s1YWBi1LBu2O30tD3jyTgMtuvk/Z1twzXM4GPYe4dmZix4nNREPJIPOcfFikNU2o0eTYP80+izx5F2jIJA==
++  dependencies:
++    "@smithy/property-provider" "^2.0.12"
++    "@smithy/shared-ini-file-loader" "^2.2.0"
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/node-http-handler@^2.1.6", "@smithy/node-http-handler@^2.1.7":
++  version "2.1.7"
++  resolved "https://registry.yarnpkg.com/@smithy/node-http-handler/-/node-http-handler-2.1.7.tgz#a920e0e40fd04e2ea399cb4f06092fea0a1b66da"
++  integrity sha512-PQIKZXlp3awCDn/xNlCSTFE7aYG/5Tx33M05NfQmWYeB5yV1GZZOSz4dXpwiNJYTXb9jPqjl+ueXXkwtEluFFA==
++  dependencies:
++    "@smithy/abort-controller" "^2.0.11"
++    "@smithy/protocol-http" "^3.0.7"
++    "@smithy/querystring-builder" "^2.0.11"
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/property-provider@^2.0.0", "@smithy/property-provider@^2.0.12":
++  version "2.0.12"
++  resolved "https://registry.yarnpkg.com/@smithy/property-provider/-/property-provider-2.0.12.tgz#09391cae6f336300e88128717ee5fb7cff76c5b4"
++  integrity sha512-Un/OvvuQ1Kg8WYtoMCicfsFFuHb/TKL3pCA6ZIo/WvNTJTR94RtoRnL7mY4XkkUAoFMyf6KjcQJ76y1FX7S5rw==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/protocol-http@^3.0.6", "@smithy/protocol-http@^3.0.7":
++  version "3.0.7"
++  resolved "https://registry.yarnpkg.com/@smithy/protocol-http/-/protocol-http-3.0.7.tgz#4deec17a27f7cc5d2bea962fcb0cdfbfd311b05c"
++  integrity sha512-HnZW8y+r66ntYueCDbLqKwWcMNWW8o3eVpSrHNluwtBJ/EUWfQHRKSiu6vZZtc6PGfPQWgVfucoCE/C3QufMAA==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/querystring-builder@^2.0.11":
++  version "2.0.11"
++  resolved "https://registry.yarnpkg.com/@smithy/querystring-builder/-/querystring-builder-2.0.11.tgz#7a56bed12474ad46059116d87eb7b81cdba9d7f6"
++  integrity sha512-b4kEbVMxpmfv2VWUITn2otckTi7GlMteZQxi+jlwedoATOGEyrCJPfRcYQJjbCi3fZ2QTfh3PcORvB27+j38Yg==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++    "@smithy/util-uri-escape" "^2.0.0"
++    tslib "^2.5.0"
++
++"@smithy/querystring-parser@^2.0.11":
++  version "2.0.11"
++  resolved "https://registry.yarnpkg.com/@smithy/querystring-parser/-/querystring-parser-2.0.11.tgz#63b7fde68714974c220e386002100ad9b70d91a3"
++  integrity sha512-YXe7jhi7s3dQ0Fu9dLoY/gLu6NCyy8tBWJL/v2c9i7/RLpHgKT+uT96/OqZkHizCJ4kr0ZD46tzMjql/o60KLg==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/service-error-classification@^2.0.4":
++  version "2.0.4"
++  resolved "https://registry.yarnpkg.com/@smithy/service-error-classification/-/service-error-classification-2.0.4.tgz#05c0a30eddbf63fb5f27704757da388aec5d66c2"
++  integrity sha512-77506l12I5gxTZqBkx3Wb0RqMG81bMYLaVQ+EqIWFwQDJRs5UFeXogKxSKojCmz1wLUziHZQXm03MBzPQiumQw==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++
++"@smithy/shared-ini-file-loader@^2.0.6", "@smithy/shared-ini-file-loader@^2.2.0":
++  version "2.2.0"
++  resolved "https://registry.yarnpkg.com/@smithy/shared-ini-file-loader/-/shared-ini-file-loader-2.2.0.tgz#9e4a90a29fe3f109875c26e6127802ed0953f43d"
++  integrity sha512-xFXqs4vAb5BdkzHSRrTapFoaqS4/3m/CGZzdw46fBjYZ0paYuLAoMY60ICCn1FfGirG+PiJ3eWcqJNe4/SkfyA==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/signature-v4@^2.0.0":
++  version "2.0.11"
++  resolved "https://registry.yarnpkg.com/@smithy/signature-v4/-/signature-v4-2.0.11.tgz#e6d9065c7a73fc6f518f0cbc94039aed49307a1c"
++  integrity sha512-EFVU1dT+2s8xi227l1A9O27edT/GNKvyAK6lZnIZ0zhIHq/jSLznvkk15aonGAM1kmhmZBVGpI7Tt0odueZK9A==
++  dependencies:
++    "@smithy/eventstream-codec" "^2.0.11"
++    "@smithy/is-array-buffer" "^2.0.0"
++    "@smithy/types" "^2.3.5"
++    "@smithy/util-hex-encoding" "^2.0.0"
++    "@smithy/util-middleware" "^2.0.4"
++    "@smithy/util-uri-escape" "^2.0.0"
++    "@smithy/util-utf8" "^2.0.0"
++    tslib "^2.5.0"
++
++"@smithy/smithy-client@^2.1.10", "@smithy/smithy-client@^2.1.9":
++  version "2.1.10"
++  resolved "https://registry.yarnpkg.com/@smithy/smithy-client/-/smithy-client-2.1.10.tgz#cfe93559dbec1511c434c8e94e1659ec74cf54f7"
++  integrity sha512-2OEmZDiW1Z196QHuQZ5M6cBE8FCSG0H2HADP1G+DY8P3agsvb0YJyfhyKuJbxIQy15tr3eDAK6FOrlbxgKOOew==
++  dependencies:
++    "@smithy/middleware-stack" "^2.0.5"
++    "@smithy/types" "^2.3.5"
++    "@smithy/util-stream" "^2.0.15"
++    tslib "^2.5.0"
++
++"@smithy/types@^2.3.4", "@smithy/types@^2.3.5":
++  version "2.3.5"
++  resolved "https://registry.yarnpkg.com/@smithy/types/-/types-2.3.5.tgz#7684a74d4368f323b478bd9e99e7dc3a6156b5e5"
++  integrity sha512-ehyDt8M9hehyxrLQGoA1BGPou8Js1Ocoh5M0ngDhJMqbFmNK5N6Xhr9/ZExWkyIW8XcGkiMPq3ZUEE0ScrhbuQ==
++  dependencies:
++    tslib "^2.5.0"
++
++"@smithy/url-parser@^2.0.10", "@smithy/url-parser@^2.0.11":
++  version "2.0.11"
++  resolved "https://registry.yarnpkg.com/@smithy/url-parser/-/url-parser-2.0.11.tgz#19c157f9d47217259e587847101ef6bd83091a5e"
++  integrity sha512-h89yXMCCF+S5k9XIoKltMIWTYj+FcEkU/IIFZ6RtE222fskOTL4Iak6ZRG+ehSvZDt8yKEcxqheTDq7JvvtK3g==
++  dependencies:
++    "@smithy/querystring-parser" "^2.0.11"
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/util-base64@^2.0.0":
++  version "2.0.0"
++  resolved "https://registry.yarnpkg.com/@smithy/util-base64/-/util-base64-2.0.0.tgz#1beeabfb155471d1d41c8d0603be1351f883c444"
++  integrity sha512-Zb1E4xx+m5Lud8bbeYi5FkcMJMnn+1WUnJF3qD7rAdXpaL7UjkFQLdmW5fHadoKbdHpwH9vSR8EyTJFHJs++tA==
++  dependencies:
++    "@smithy/util-buffer-from" "^2.0.0"
++    tslib "^2.5.0"
++
++"@smithy/util-body-length-browser@^2.0.0":
++  version "2.0.0"
++  resolved "https://registry.yarnpkg.com/@smithy/util-body-length-browser/-/util-body-length-browser-2.0.0.tgz#5447853003b4c73da3bc5f3c5e82c21d592d1650"
++  integrity sha512-JdDuS4ircJt+FDnaQj88TzZY3+njZ6O+D3uakS32f2VNnDo3vyEuNdBOh/oFd8Df1zSZOuH1HEChk2AOYDezZg==
++  dependencies:
++    tslib "^2.5.0"
++
++"@smithy/util-body-length-node@^2.1.0":
++  version "2.1.0"
++  resolved "https://registry.yarnpkg.com/@smithy/util-body-length-node/-/util-body-length-node-2.1.0.tgz#313a5f7c5017947baf5fa018bfc22628904bbcfa"
++  integrity sha512-/li0/kj/y3fQ3vyzn36NTLGmUwAICb7Jbe/CsWCktW363gh1MOcpEcSO3mJ344Gv2dqz8YJCLQpb6hju/0qOWw==
++  dependencies:
++    tslib "^2.5.0"
++
++"@smithy/util-buffer-from@^2.0.0":
++  version "2.0.0"
++  resolved "https://registry.yarnpkg.com/@smithy/util-buffer-from/-/util-buffer-from-2.0.0.tgz#7eb75d72288b6b3001bc5f75b48b711513091deb"
++  integrity sha512-/YNnLoHsR+4W4Vf2wL5lGv0ksg8Bmk3GEGxn2vEQt52AQaPSCuaO5PM5VM7lP1K9qHRKHwrPGktqVoAHKWHxzw==
++  dependencies:
++    "@smithy/is-array-buffer" "^2.0.0"
++    tslib "^2.5.0"
++
++"@smithy/util-config-provider@^2.0.0":
++  version "2.0.0"
++  resolved "https://registry.yarnpkg.com/@smithy/util-config-provider/-/util-config-provider-2.0.0.tgz#4dd6a793605559d94267312fd06d0f58784b4c38"
++  integrity sha512-xCQ6UapcIWKxXHEU4Mcs2s7LcFQRiU3XEluM2WcCjjBtQkUN71Tb+ydGmJFPxMUrW/GWMgQEEGipLym4XG0jZg==
++  dependencies:
++    tslib "^2.5.0"
++
++"@smithy/util-defaults-mode-browser@^2.0.13":
++  version "2.0.14"
++  resolved "https://registry.yarnpkg.com/@smithy/util-defaults-mode-browser/-/util-defaults-mode-browser-2.0.14.tgz#e1c6f67277e5887eed8290d24c18175f2ae22b3d"
++  integrity sha512-NupG7SWUucm3vJrvlpt9jG1XeoPJphjcivgcUUXhDJbUPy4F04LhlTiAhWSzwlCNcF8OJsMvZ/DWbpYD3pselw==
++  dependencies:
++    "@smithy/property-provider" "^2.0.12"
++    "@smithy/smithy-client" "^2.1.10"
++    "@smithy/types" "^2.3.5"
++    bowser "^2.11.0"
++    tslib "^2.5.0"
++
++"@smithy/util-defaults-mode-node@^2.0.15":
++  version "2.0.18"
++  resolved "https://registry.yarnpkg.com/@smithy/util-defaults-mode-node/-/util-defaults-mode-node-2.0.18.tgz#29c640c363e4cb2b99c93c4c2a34e2297c5276f7"
++  integrity sha512-+3jMom/b/Cdp21tDnY4vKu249Al+G/P0HbRbct7/aSZDlROzv1tksaYukon6UUv7uoHn+/McqnsvqZHLlqvQ0g==
++  dependencies:
++    "@smithy/config-resolver" "^2.0.14"
++    "@smithy/credential-provider-imds" "^2.0.16"
++    "@smithy/node-config-provider" "^2.1.1"
++    "@smithy/property-provider" "^2.0.12"
++    "@smithy/smithy-client" "^2.1.10"
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/util-hex-encoding@^2.0.0":
++  version "2.0.0"
++  resolved "https://registry.yarnpkg.com/@smithy/util-hex-encoding/-/util-hex-encoding-2.0.0.tgz#0aa3515acd2b005c6d55675e377080a7c513b59e"
++  integrity sha512-c5xY+NUnFqG6d7HFh1IFfrm3mGl29lC+vF+geHv4ToiuJCBmIfzx6IeHLg+OgRdPFKDXIw6pvi+p3CsscaMcMA==
++  dependencies:
++    tslib "^2.5.0"
++
++"@smithy/util-middleware@^2.0.3", "@smithy/util-middleware@^2.0.4":
++  version "2.0.4"
++  resolved "https://registry.yarnpkg.com/@smithy/util-middleware/-/util-middleware-2.0.4.tgz#2c406efac04e341c3df6435d71fd9c73e03feb46"
++  integrity sha512-Pbu6P4MBwRcjrLgdTR1O4Y3c0sTZn2JdOiJNcgL7EcIStcQodj+6ZTXtbyU/WTEU3MV2NMA10LxFc3AWHZ3+4A==
++  dependencies:
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/util-retry@^2.0.3", "@smithy/util-retry@^2.0.4":
++  version "2.0.4"
++  resolved "https://registry.yarnpkg.com/@smithy/util-retry/-/util-retry-2.0.4.tgz#b3ae28e73b4bdec21480005e76f9eeb9d7279e89"
++  integrity sha512-b+n1jBBKc77C1E/zfBe1Zo7S9OXGBiGn55N0apfhZHxPUP/fMH5AhFUUcWaJh7NAnah284M5lGkBKuhnr3yK5w==
++  dependencies:
++    "@smithy/service-error-classification" "^2.0.4"
++    "@smithy/types" "^2.3.5"
++    tslib "^2.5.0"
++
++"@smithy/util-stream@^2.0.15":
++  version "2.0.15"
++  resolved "https://registry.yarnpkg.com/@smithy/util-stream/-/util-stream-2.0.15.tgz#8c08f135535484f7a11ced4c697a5d901e316b3a"
++  integrity sha512-A/hkYJPH2N5MCWYvky4tTpQihpYAEzqnUfxDyG3L/yMndy/2sLvxnyQal9Opuj1e9FiKSTeMyjnU9xxZGs0mRw==
++  dependencies:
++    "@smithy/fetch-http-handler" "^2.2.2"
++    "@smithy/node-http-handler" "^2.1.7"
++    "@smithy/types" "^2.3.5"
++    "@smithy/util-base64" "^2.0.0"
++    "@smithy/util-buffer-from" "^2.0.0"
++    "@smithy/util-hex-encoding" "^2.0.0"
++    "@smithy/util-utf8" "^2.0.0"
++    tslib "^2.5.0"
++
++"@smithy/util-uri-escape@^2.0.0":
++  version "2.0.0"
++  resolved "https://registry.yarnpkg.com/@smithy/util-uri-escape/-/util-uri-escape-2.0.0.tgz#19955b1a0f517a87ae77ac729e0e411963dfda95"
++  integrity sha512-ebkxsqinSdEooQduuk9CbKcI+wheijxEb3utGXkCoYQkJnwTnLbH1JXGimJtUkQwNQbsbuYwG2+aFVyZf5TLaw==
++  dependencies:
++    tslib "^2.5.0"
++
++"@smithy/util-utf8@^2.0.0":
++  version "2.0.0"
++  resolved "https://registry.yarnpkg.com/@smithy/util-utf8/-/util-utf8-2.0.0.tgz#b4da87566ea7757435e153799df9da717262ad42"
++  integrity sha512-rctU1VkziY84n5OXe3bPNpKR001ZCME2JCaBBFgtiM2hfKbHFudc/BkMuPab8hRbLd0j3vbnBTTZ1igBf0wgiQ==
++  dependencies:
++    "@smithy/util-buffer-from" "^2.0.0"
++    tslib "^2.5.0"
++
+ "@szmarczak/http-timer@^4.0.5":
+   version "4.0.6"
+   resolved "https://registry.yarnpkg.com/@szmarczak/http-timer/-/http-timer-4.0.6.tgz#b4a914bb62e7c272d4e5989fe4440f812ab1d807"
+@@ -5282,6 +6013,11 @@ boolbase@^1.0.0, boolbase@~1.0.0:
+   resolved "https://registry.yarnpkg.com/boolbase/-/boolbase-1.0.0.tgz#68dff5fbe60c51eb37725ea9e3ed310dcc1e776e"
+   integrity sha1-aN/1++YMUes3cl6p4+0xDcwed24=
+ 
++bowser@^2.11.0:
++  version "2.11.0"
++  resolved "https://registry.yarnpkg.com/bowser/-/bowser-2.11.0.tgz#5ca3c35757a7aa5771500c70a73a9f91ef420a8f"
++  integrity sha512-AlcaJBi/pqqJBIQ8U9Mcpc9i8Aqxn88Skv5d+xBX006BY5u8N3mGLHa5Lgppa7L/HfwgwLgZ6NYs+Ag6uUmJRA==
++
+ brace-expansion@^1.1.7:
+   version "1.1.11"
+   resolved "https://registry.yarnpkg.com/brace-expansion/-/brace-expansion-1.1.11.tgz#3c7fcbf529d87226f3d2f52b966ff5271eb441dd"
+@@ -8573,6 +9309,13 @@ fast-stream-to-buffer@^1.0.0:
+   dependencies:
+     end-of-stream "^1.4.1"
+ 
++fast-xml-parser@4.2.5:
++  version "4.2.5"
++  resolved "https://registry.yarnpkg.com/fast-xml-parser/-/fast-xml-parser-4.2.5.tgz#a6747a09296a6cb34f2ae634019bf1738f3b421f"
++  integrity sha512-B9/wizE4WngqQftFPmdaMYlXoJlJOYxGQOanC77fq9k8+Z0v5dDSVh+3glErdIROP//s/jgb7ZuxKfB8nVyo0g==
++  dependencies:
++    strnum "^1.0.5"
++
+ fastest-levenshtein@^1.0.12:
+   version "1.0.12"
+   resolved "https://registry.yarnpkg.com/fastest-levenshtein/-/fastest-levenshtein-1.0.12.tgz#9990f7d3a88cc5a9ffd1f1745745251700d497e2"
+@@ -11486,6 +12229,11 @@ joi@^17.3.0:
+     "@sideway/formula" "^3.0.0"
+     "@sideway/pinpoint" "^2.0.0"
+ 
++jose@^4.14.6:
++  version "4.15.2"
++  resolved "https://registry.yarnpkg.com/jose/-/jose-4.15.2.tgz#61f97383f0b433d45da26d35094155a30a672d92"
++  integrity sha512-IY73F228OXRl9ar3jJagh7Vnuhj/GzBunPiZP13K0lOl7Am9SoWW3kEzq3MCllJMTtZqHTiDXQvoRd4U95aU6A==
++
+ jpeg-js@^0.4.0:
+   version "0.4.4"
+   resolved "https://registry.yarnpkg.com/jpeg-js/-/jpeg-js-0.4.4.tgz#a9f1c6f1f9f0fa80cdb3484ed9635054d28936aa"
+@@ -16564,6 +17312,11 @@ strip-json-comments@3.1.1, strip-json-comments@^3.0.1, strip-json-comments@^3.1.
+   resolved "https://registry.yarnpkg.com/strip-json-comments/-/strip-json-comments-3.1.1.tgz#31f1281b3832630434831c310c01cccda8cbe006"
+   integrity sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==
+ 
++strnum@^1.0.5:
++  version "1.0.5"
++  resolved "https://registry.yarnpkg.com/strnum/-/strnum-1.0.5.tgz#5c4e829fe15ad4ff0d20c3db5ac97b73c9b072db"
++  integrity sha512-J8bbNyKKXl5qYcR36TIO8W3mVGVHrmmxsd5PAItGkmyzwJvybiw2IVq5nqd0i4LSNSkB/sx9VHllbfFdr9k1JA==
++
+ strong-log-transformer@^2.1.0:
+   version "2.1.0"
+   resolved "https://registry.yarnpkg.com/strong-log-transformer/-/strong-log-transformer-2.1.0.tgz#0f5ed78d325e0421ac6f90f7f10e691d6ae3ae10"
+@@ -17316,7 +18069,7 @@ tsd@^0.21.0:
+     path-exists "^4.0.0"
+     read-pkg-up "^7.0.0"
+ 
+-tslib@^1.0.0, tslib@^1.10.0, tslib@^1.8.1, tslib@^1.9.0, tslib@^1.9.3:
++tslib@^1.0.0, tslib@^1.10.0, tslib@^1.11.1, tslib@^1.8.1, tslib@^1.9.0, tslib@^1.9.3:
+   version "1.14.1"
+   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.14.1.tgz#cf2d38bdc34a134bcaf1091c41f6619e2f672d00"
+   integrity sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==
+@@ -17326,7 +18079,7 @@ tslib@^2.0.0, tslib@^2.0.3, tslib@^2.2.0, tslib@^2.3.0, tslib@^2.3.1:
+   resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.3.1.tgz#e8a335add5ceae51aa261d32a490158ef042ef01"
+   integrity sha512-77EbyPPpMz+FRFRuAFlWMtmgUWGe9UOG2Z25NqCwiIjRhOf5iKGuzSe5P2w1laq+FkRy4p+PCuVkJSGkzTEKVw==
+ 
+-tslib@^2.4.0:
++tslib@^2.4.0, tslib@^2.5.0:
+   version "2.6.2"
+   resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.6.2.tgz#703ac29425e7b37cd6fd456e92404d46d1f3e4ae"
+   integrity sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==
+@@ -17867,6 +18620,11 @@ uuid@^3.3.2, uuid@^3.3.3:
+   resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.4.0.tgz#b23e4358afa8a202fe7a100af1f5f883f02007ee"
+   integrity sha512-HjSDRw6gZE5JMggctHBcjVak08+KEVhSIiDzFnT9S9aegmp85S/bReBVTb4QTFaRNptJ9kuYaNhnbNEOkbKb/A==
+ 
++uuid@^8.3.2:
++  version "8.3.2"
++  resolved "https://registry.yarnpkg.com/uuid/-/uuid-8.3.2.tgz#80d5b5ced271bb9af6c445f21a1a04c606cefbe2"
++  integrity sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==
++
+ uuid@^9.0.0:
+   version "9.0.0"
+   resolved "https://registry.yarnpkg.com/uuid/-/uuid-9.0.0.tgz#592f550650024a38ceb0c562f2f6aa435761efb5"

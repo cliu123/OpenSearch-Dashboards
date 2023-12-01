@@ -30,6 +30,7 @@ export const CreateDataSourceWizard: React.FunctionComponent<CreateDataSourceWiz
     setBreadcrumbs,
     http,
     notifications: { toasts },
+    application,
   } = useOpenSearchDashboards<DataSourceManagementContext>().services;
 
   /* State Variables */
@@ -118,6 +119,9 @@ export const CreateDataSourceWizard: React.FunctionComponent<CreateDataSourceWiz
           handleTestConnection={handleTestConnection}
           handleCancel={() => props.history.push('')}
           existingDatasourceNamesList={existingDatasourceNamesList}
+          allowedAuthTypes={
+            application.capabilities.dataSource.allowedAuthTypes as Record<string, boolean>
+          }
         />
         {isLoading ? <LoadingMask /> : null}
       </>

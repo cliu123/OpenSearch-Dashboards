@@ -29,6 +29,7 @@ export const registerTestConnectionRoute = (
                   schema.literal(AuthType.UsernamePasswordType),
                   schema.literal(AuthType.NoAuth),
                   schema.literal(AuthType.SigV4),
+                  schema.literal(AuthType.TokenExchange),
                 ]),
                 credentials: schema.maybe(
                   schema.oneOf([
@@ -40,10 +41,10 @@ export const registerTestConnectionRoute = (
                       region: schema.string(),
                       accessKey: schema.string(),
                       secretKey: schema.string(),
-                      service: schema.oneOf([
-                        schema.literal(SigV4ServiceName.OpenSearch),
-                        schema.literal(SigV4ServiceName.OpenSearchServerless),
-                      ]),
+                    }),
+                    schema.object({
+                      region: schema.string(),
+                      roleARN: schema.string(),
                     }),
                   ])
                 ),
@@ -63,6 +64,7 @@ export const registerTestConnectionRoute = (
             cryptography,
             dataSourceId,
             testClientDataSourceAttr: dataSourceAttr as DataSourceAttributes,
+            request,
           }
         );
 

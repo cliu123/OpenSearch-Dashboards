@@ -6,6 +6,7 @@
 import {
   LegacyCallAPIOptions,
   OpenSearchClient,
+  OpenSearchDashboardsRequest,
   SavedObjectsClientContract,
 } from 'src/core/server';
 import { DataSourceAttributes } from '../common/data_sources';
@@ -27,6 +28,8 @@ export interface DataSourceClientParams {
   dataSourceId?: string;
   // required when creating test client
   testClientDataSourceAttr?: DataSourceAttributes;
+  // to read id token from request header
+  request: OpenSearchDashboardsRequest;
 }
 
 export interface DataSourcePluginRequestContext {

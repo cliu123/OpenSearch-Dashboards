@@ -11,6 +11,8 @@ import {
   mockManagementPlugin,
   existingDatasourceNamesList,
   mockDataSourceAttributesWithNoAuth,
+  mockDefaultAllowedAuthTypes,
+  mockDataSourceAttributesWithTokenExchange,
 } from '../../../../mocks';
 import { OpenSearchDashboardsContextProvider } from '../../../../../../opensearch_dashboards_react/public';
 import { EditDataSourceForm } from './edit_data_source_form';
@@ -27,6 +29,10 @@ const usernameFieldIdentifier = 'datasourceUsername';
 const usernameFormRowIdentifier = '[data-test-subj="editDatasourceUsernameFormRow"]';
 const passwordFieldIdentifier = '[data-test-subj="updateDataSourceFormPasswordField"]';
 const updatePasswordBtnIdentifier = '[data-test-subj="editDatasourceUpdatePasswordBtn"]';
+const regionIdentifier = '[data-test-subj="updateDataSourceFormRegionField"]';
+const roleArnIdentifier = '[data-test-subj="updateDataSourceFormRoleArnField"]';
+const updateBtnIdentifier = '[data-test-subj="datasource-edit-saveButton"]';
+
 describe('Datasource Management: Edit Datasource Form', () => {
   const mockedContext = mockManagementPlugin.createDataSourceManagementContext();
   let component: ReactWrapper<any, Readonly<{}>, React.Component<{}, {}, any>>;
@@ -68,6 +74,7 @@ describe('Datasource Management: Edit Datasource Form', () => {
             handleSubmit={mockFn}
             handleTestConnection={mockFn}
             displayToastMessage={mockFn}
+            allowedAuthTypes={mockDefaultAllowedAuthTypes}
           />
         ),
         {
@@ -215,10 +222,8 @@ describe('Datasource Management: Edit Datasource Form', () => {
             component.find(descriptionFormRowIdentifier).first().props().isInvalid
           ).toBeUndefined();
 
-          expect(component.find('[data-test-subj="datasource-edit-saveButton"]').exists()).toBe(
-            true
-          );
-          component.find('[data-test-subj="datasource-edit-saveButton"]').first().simulate('click');
+          expect(component.find(updateBtnIdentifier).exists()).toBe(true);
+          component.find(updateBtnIdentifier).first().simulate('click');
           expect(mockFn).toHaveBeenCalled();
           resolve();
         }, 100)
@@ -237,6 +242,7 @@ describe('Datasource Management: Edit Datasource Form', () => {
             handleSubmit={mockFn}
             handleTestConnection={mockFn}
             displayToastMessage={mockFn}
+            allowedAuthTypes={mockDefaultAllowedAuthTypes}
           />
         ),
         {
@@ -310,10 +316,8 @@ describe('Datasource Management: Edit Datasource Form', () => {
             component.find(descriptionFormRowIdentifier).first().props().isInvalid
           ).toBeUndefined();
 
-          expect(component.find('[data-test-subj="datasource-edit-saveButton"]').exists()).toBe(
-            true
-          );
-          component.find('[data-test-subj="datasource-edit-saveButton"]').first().simulate('click');
+          expect(component.find(updateBtnIdentifier).exists()).toBe(true);
+          component.find(updateBtnIdentifier).first().simulate('click');
           expect(mockFn).toHaveBeenCalled();
           resolve();
         }, 100)
@@ -327,6 +331,108 @@ describe('Datasource Management: Edit Datasource Form', () => {
       component.find('Header').first().prop('onClickTestConnection')();
       component.update();
       expect(mockFn).toHaveBeenCalled();
+    });
+  });
+
+  describe('Case 3: With Token Exchange', () => {
+    beforeEach(() => {
+      component = mount(
+        wrapWithIntl(
+          <EditDataSourceForm
+            existingDataSource={mockDataSourceAttributesWithTokenExchange}
+            existingDatasourceNamesList={existingDatasourceNamesList}
+            onDeleteDataSource={mockFn}
+            handleSubmit={mockFn}
+            handleTestConnection={mockFn}
+            displayToastMessage={mockFn}
+            allowedAuthTypes={mockDefaultAllowedAuthTypes}
+          />
+        ),
+        {
+          wrappingComponent: OpenSearchDashboardsContextProvider,
+          wrappingComponentProps: {
+            services: mockedContext,
+          },
+        }
+      );
+      component.update();
+    });
+
+    test('should render normally', () => {
+      // @ts-ignore
+      expect(component.find({ name: titleFieldIdentifier }).first().props().value).toBe(
+        mockDataSourceAttributesWithTokenExchange.title
+      );
+      expect(component.find(endpointFieldIdentifier).first().props().disabled).toBe(true);
+    });
+
+    /* functionality */
+    test("should show region and IAM role ARN fields when 'AWS Token Exchange' is selected as the credential type", () => {
+      setAuthTypeValue(authTypeSelectIdentifier, AuthType.TokenExchange);
+      component.update();
+      expect(component.find(regionIdentifier).exists()).toBe(true);
+      expect(component.find(roleArnIdentifier).exists()).toBe(true);
+    });
+
+    /* validation - Region */
+    test('should validate region as required field', () => {
+      setAuthTypeValue(authTypeSelectIdentifier, AuthType.TokenExchange);
+      component.update();
+
+      /* Validate empty region - required */
+      updateInputFieldAndBlur(component, regionIdentifier, '', true);
+      // @ts-ignore
+      expect(component.find(regionIdentifier).first().props().isInvalid).toBe(true);
+
+      /* change to original username */
+      updateInputFieldAndBlur(component, regionIdentifier, 'region1', true);
+      // @ts-ignore
+      expect(component.find(regionIdentifier).first().props().isInvalid).toBe(false);
+    });
+
+    /* validation - IAM Role arn */
+    test('should validate role arn as required field', () => {
+      setAuthTypeValue(authTypeSelectIdentifier, AuthType.TokenExchange);
+      component.update();
+
+      /* Validate empty role arn - required */
+      updateInputFieldAndBlur(component, roleArnIdentifier, '', true);
+      // @ts-ignore
+      expect(component.find(roleArnIdentifier).first().props().isInvalid).toBe(true);
+
+      /* change to original rolearn */
+      updateInputFieldAndBlur(component, roleArnIdentifier, 'test-role', true);
+      // @ts-ignore
+      expect(component.find(roleArnIdentifier).first().props().isInvalid).toBe(false);
+    });
+
+    /* Save Changes */
+    test('should update the form with TokenExchange on click save changes', async () => {
+      await new Promise((resolve) =>
+        setTimeout(() => {
+          updateInputFieldAndBlur(component, descriptionFieldIdentifier, '');
+          expect(
+            // @ts-ignore
+            component.find(descriptionFormRowIdentifier).first().props().isInvalid
+          ).toBeUndefined();
+          resolve();
+        }, 100)
+      );
+      await new Promise((resolve) =>
+        setTimeout(() => {
+          /* Updated description*/
+          updateInputFieldAndBlur(component, descriptionFieldIdentifier, 'testDescription');
+          expect(
+            // @ts-ignore
+            component.find(descriptionFormRowIdentifier).first().props().isInvalid
+          ).toBeUndefined();
+
+          expect(component.find(updateBtnIdentifier).exists()).toBe(true);
+          component.find(updateBtnIdentifier).first().simulate('click');
+          expect(mockFn).toHaveBeenCalled();
+          resolve();
+        }, 100)
+      );
     });
   });
 });

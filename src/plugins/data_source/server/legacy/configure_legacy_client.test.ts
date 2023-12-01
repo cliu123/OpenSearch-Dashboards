@@ -18,6 +18,8 @@ import { configureLegacyClient } from './configure_legacy_client';
 
 const DATA_SOURCE_ID = 'a54b76ec86771ee865a0f74a305dfff8';
 
+jest.mock('../client/neo_credential_provider');
+
 // TODO: improve UT
 describe('configureLegacyClient', () => {
   let logger: ReturnType<typeof loggingSystemMock.createLogger>;

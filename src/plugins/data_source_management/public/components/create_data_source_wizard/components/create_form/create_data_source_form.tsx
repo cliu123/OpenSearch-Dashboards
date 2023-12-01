@@ -29,12 +29,14 @@ import {
   DataSourceManagementContextValue,
   UsernamePasswordTypedContent,
   sigV4ServiceOptions,
+  TokenExchangeContent,
 } from '../../../../types';
 import { Header } from '../header';
 import { context as contextType } from '../../../../../../opensearch_dashboards_react/public';
 import {
   CreateEditDataSourceValidation,
   defaultValidation,
+  getDefaultAuthType,
   isTitleValid,
   performDataSourceFormValidation,
 } from '../../../validation';
@@ -44,6 +46,7 @@ export interface CreateDataSourceProps {
   existingDatasourceNamesList: string[];
   handleSubmit: (formValues: DataSourceAttributes) => void;
   handleTestConnection: (formValues: DataSourceAttributes) => void;
+  allowedAuthTypes: Record<string, boolean>;
   handleCancel: () => void;
 }
 export interface CreateDataSourceState {
@@ -55,7 +58,7 @@ export interface CreateDataSourceState {
   endpoint: string;
   auth: {
     type: AuthType;
-    credentials: UsernamePasswordTypedContent | SigV4Content;
+    credentials: UsernamePasswordTypedContent | SigV4Content | TokenExchangeContent | undefined;
   };
 }
 
@@ -74,13 +77,7 @@ export class CreateDataSourceForm extends React.Component<
       title: '',
       description: '',
       endpoint: '',
-      auth: {
-        type: AuthType.UsernamePasswordType,
-        credentials: {
-          username: '',
-          password: '',
-        },
-      },
+      auth: getDefaultAuthType(this.props.allowedAuthTypes),
     };
   }
 
@@ -262,6 +259,53 @@ export class CreateDataSourceForm extends React.Component<
     });
   };
 
+  onChangeOpenSearchRegion = (e: { target: { value: any } }) => {
+    this.setState({
+      auth: {
+        ...this.state.auth,
+        credentials: {
+          ...this.state.auth.credentials,
+          region: e.target.value,
+        } as TokenExchangeContent,
+      },
+    });
+  };
+
+  validateOpenSearchRegion = () => {
+    const isValid = !!this.state.auth.credentials.region?.trim().length;
+    this.setState({
+      formErrorsByField: {
+        ...this.state.formErrorsByField,
+        tokenExchangeCredentials: {
+          ...this.state.formErrorsByField.tokenExchangeCredentials,
+          region: isValid ? [] : [''],
+        },
+      },
+    });
+  };
+
+  onChangeRoleArn = (e: { target: { value: any } }) => {
+    this.setState({
+      auth: {
+        ...this.state.auth,
+        credentials: { ...this.state.auth.credentials, roleARN: e.target.value },
+      },
+    });
+  };
+
+  validateRoleArn = () => {
+    const isValid = !!this.state.auth.credentials.roleARN;
+    this.setState({
+      formErrorsByField: {
+        ...this.state.formErrorsByField,
+        tokenExchangeCredentials: {
+          ...this.state.formErrorsByField.tokenExchangeCredentials,
+          roleArn: isValid ? [] : [''],
+        },
+      },
+    });
+  };
+
   onClickCreateNewDataSource = () => {
     if (this.isFormValid()) {
       const formValues: DataSourceAttributes = this.getFormValues();
@@ -297,6 +341,12 @@ export class CreateDataSourceForm extends React.Component<
         secretKey: this.state.auth.credentials.secretKey,
         service: this.state.auth.credentials.service || SigV4ServiceName.OpenSearch,
       } as SigV4Content;
+    }
+    if (this.state.auth.type === AuthType.TokenExchange) {
+      credentials = {
+        region: this.state.auth.credentials.region,
+        roleARN: this.state.auth.credentials.roleARN,
+      } as TokenExchangeContent;
     }
 
     return {
@@ -340,6 +390,30 @@ export class CreateDataSourceForm extends React.Component<
             />
           }
         </i>
+      </>
+    );
+  };
+
+  /* Render Authentication Description*/
+  renderAuthenticationDescription = (i18nId: string, defaultMessage: string) => {
+    if (this.props.allowedAuthTypes.showNoAuth) {
+      defaultMessage += 'If no authentication is required, choose';
+    }
+    return (
+      <>
+        <EuiFormRow>
+          <EuiText>
+            <FormattedMessage id={i18nId} defaultMessage={defaultMessage} />
+            {this.props.allowedAuthTypes.showNoAuth ?? (
+              <b>
+                <FormattedMessage
+                  id="dataSourcesManagement.createDataSource.noAuthentication"
+                  defaultMessage="No authentication"
+                />
+              </b>
+            )}
+          </EuiText>
+        </EuiFormRow>
       </>
     );
   };
@@ -481,6 +555,53 @@ export class CreateDataSourceForm extends React.Component<
             </EuiFormRow>
           </>
         );
+      case AuthType.TokenExchange:
+        return (
+          <>
+            <EuiFormRow
+              label={i18n.translate('dataSourcesManagement.createDataSource.region', {
+                defaultMessage: 'Region',
+              })}
+              isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.region.length}
+              error={this.state.formErrorsByField.tokenExchangeCredentials.region}
+            >
+              <EuiFieldText
+                placeholder={i18n.translate(
+                  'dataSourcesManagement.createDataSource.regionPlaceholder',
+                  {
+                    defaultMessage: 'AWS Region, e.g. us-west-2',
+                  }
+                )}
+                isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.region.length}
+                value={this.state.auth.credentials.region || ''}
+                onChange={this.onChangeOpenSearchRegion}
+                onBlur={this.validateOpenSearchRegion}
+                data-test-subj="createDataSourceFormRegionField"
+              />
+            </EuiFormRow>
+            <EuiFormRow
+              label={i18n.translate('dataSourcesManagement.createDataSource.roleArn', {
+                defaultMessage: 'IAM role ARN',
+              })}
+              isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.roleArn.length}
+              error={this.state.formErrorsByField.tokenExchangeCredentials.roleArn}
+            >
+              <EuiFieldText
+                placeholder={i18n.translate(
+                  'dataSourcesManagement.createDataSource.roleArnPlaceholder',
+                  {
+                    defaultMessage: 'IAM role ARN',
+                  }
+                )}
+                isInvalid={!!this.state.formErrorsByField.tokenExchangeCredentials.roleArn.length}
+                value={this.state.auth.credentials.roleARN || ''}
+                onChange={this.onChangeRoleArn}
+                onBlur={this.validateRoleArn}
+                data-test-subj="createDataSourceFormRoleArnField"
+              />
+            </EuiFormRow>
+          </>
+        );
 
       default:
         break;
@@ -580,26 +701,16 @@ export class CreateDataSourceForm extends React.Component<
             )}
             <EuiSpacer size="m" />
 
-            <EuiFormRow>
-              <EuiText>
-                <FormattedMessage
-                  id="dataSourcesManagement.createDataSource.authenticationMethodDescription"
-                  defaultMessage="Enter the authentication details to access the endpoint. If no authentication is required, select "
-                />
-                <b>
-                  <FormattedMessage
-                    id="dataSourcesManagement.createDataSource.noAuthentication"
-                    defaultMessage="No authentication"
-                  />
-                </b>
-              </EuiText>
-            </EuiFormRow>
+          {this.renderAuthenticationDescription(
+            'dataSourcesManagement.createDataSource.authenticationMethodDescription',
+            'Provide authentication details require to gain access to the endpoint.'
+          )}
 
             {/* Credential source */}
             <EuiSpacer size="l" />
             <EuiFormRow>
               <EuiSelect
-                options={credentialSourceOptions}
+                options={credentialSourceOptions(this.props.allowedAuthTypes)}
                 value={this.state.auth.type}
                 onChange={(e) => this.onChangeAuthType(e)}
                 name="Credential"
@@ -615,6 +726,10 @@ export class CreateDataSourceForm extends React.Component<
             {this.state.auth.type === AuthType.SigV4
               ? this.renderCreateNewCredentialsForm(this.state.auth.type)
               : null}
+
+          {this.state.auth.type === AuthType.TokenExchange
+            ? this.renderCreateNewCredentialsForm(this.state.auth.type)
+            : null}
 
             <EuiSpacer size="xl" />
             <EuiFormRow>

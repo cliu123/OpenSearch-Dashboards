@@ -5,6 +5,7 @@
 # The default is 'localhost', which usually means remote machines will not be able to connect.
 # To allow connections from remote users, set this parameter to a non-loopback address.
 #server.host: "localhost"
+server.host: 0.0.0.0
 
 # Enables you to specify a path to mount OpenSearch Dashboards at if you are running behind a proxy.
 # Use the `server.rewriteBasePath` setting to tell OpenSearch Dashboards if it should remove the basePath
@@ -24,6 +25,7 @@
 
 # The URLs of the OpenSearch instances to use for all your queries.
 #opensearch.hosts: ["http://localhost:9200"]
+opensearch.hosts: []
 
 # OpenSearch Dashboards uses an index in OpenSearch to store saved searches, visualizations and
 # dashboards. OpenSearch Dashboards creates a new index if the index doesn't already exist.
@@ -268,8 +270,33 @@
 #    'ff00::/8',
 # ]
 
+# Set enabled false to hide authentication method in OpenSearch Dashboards.
+# If this setting is commented then all 4 options will be available in OpenSearch Dashboards.
+# Default value will be considered to True.
+data_source.authTypes:
+  NoAuthentication:
+    enabled: false
+  UsernamePassword:
+    enabled: false
+  AWSSigV4:
+    enabled: false
+  TokenExchange:
+    enabled: true
+
 # Set the value of this setting to false to hide the help menu link to the OpenSearch Dashboards user survey
 # opensearchDashboards.survey.url: "https://survey.opensearch.org"
+dynamoDBStorage.enabled: true
 
 # Set the value of this setting to true to enable plugin augmentation
 # vis_augmenter.pluginAugmentationEnabled: true
+
+migrations.skip: true
+
+# Config content-security-policy directives
+csp.rules: ["base-uri 'none'","connect-src 'self'","default-src 'none'","font-src 'self'","frame-ancestors 'none'","img-src data: 'self'","object-src 'none'","script-src 'unsafe-eval' 'self'","style-src 'unsafe-inline' 'self'","worker-src blob: 'self'"]
+
+vis_type_timeline.enabled: false
+vis_type_vega.enabled: false
+vis_type_timeseries.enabled: false
+
+data_source.enabled: true

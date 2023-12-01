@@ -25,6 +25,7 @@ import {
 } from '../../common/data_sources';
 import { EncryptionContext, CryptographyServiceSetup } from '../cryptography_service';
 import { isValidURL } from '../util/endpoint_validator';
+import { TokenExchangeContent } from '../../common/data_sources/types';
 
 /**
  * Describes the Credential Saved Objects Client Wrapper class,
@@ -169,6 +170,11 @@ export class DataSourceSavedObjectsClientWrapper {
           ...attributes,
           auth: await this.encryptSigV4Credential(auth, { endpoint }),
         };
+      case AuthType.TokenExchange:
+        return {
+          ...attributes,
+          auth,
+        };
       default:
         throw SavedObjectsErrorHelpers.createBadRequestError(`Invalid auth type: '${auth.type}'`);
     }
@@ -237,6 +243,8 @@ export class DataSourceSavedObjectsClientWrapper {
           }
           return attributes;
         }
+      case AuthType.TokenExchange:
+        return attributes;
       default:
         throw SavedObjectsErrorHelpers.createBadRequestError(`Invalid credentials type: '${type}'`);
     }
@@ -327,6 +335,27 @@ export class DataSourceSavedObjectsClientWrapper {
           );
         }
         break;
+      case AuthType.TokenExchange:
+        if (!credentials) {
+          throw SavedObjectsErrorHelpers.createBadRequestError(
+            '"auth.credentials" attribute is required'
+          );
+        }
+
+        const { region: domainRegion, roleARN } = credentials as TokenExchangeContent;
+
+        if (!roleARN) {
+          throw SavedObjectsErrorHelpers.createBadRequestError(
+            '"auth.credentials.roleARN" attribute is required'
+          );
+        }
+
+        if (!domainRegion) {
+          throw SavedObjectsErrorHelpers.createBadRequestError(
+            '"auth.credentials.region" attribute is required'
+          );
+        }
+        break;
       default:
         throw SavedObjectsErrorHelpers.createBadRequestError(`Invalid auth type: '${type}'`);
     }
@@ -357,6 +386,7 @@ export class DataSourceSavedObjectsClientWrapper {
 
     switch (auth.type) {
       case AuthType.NoAuth:
+      case AuthType.TokenExchange:
         // Signing the data source with existing endpoint
         encryptionContext = { endpoint };
         break;
