@@ -32,8 +32,6 @@ import { dirname, resolve } from 'path';
 import { readFile } from 'fs/promises';
 
 import Chalk from 'chalk';
-import execa from 'execa';
-import { relativeToRepoRoot, REPO_ROOT } from '@osd/cross-platform';
 import stripAnsi from 'strip-ansi';
 
 import { diff } from 'jest-diff';
@@ -41,11 +39,9 @@ import jsonStable from 'json-stable-stringify';
 import { ascending, CacheableWorkerConfig } from '../common';
 
 import { getMtimes } from './get_mtimes';
-import { getChanges } from './get_changes';
 import { OptimizerConfig } from './optimizer_config';
 
 const OPTIMIZER_DIR = dirname(require.resolve('../../package.json'));
-const RELATIVE_DIR = relativeToRepoRoot(OPTIMIZER_DIR)!;
 
 export function diffCacheKey(expected?: unknown, actual?: unknown) {
   const expectedJson = jsonStable(expected, {
@@ -134,23 +130,10 @@ export function reformatJestDiff(jestDiff: string | null) {
 }
 
 export interface OptimizerCacheKey {
-  readonly lastCommit: string | undefined;
   readonly bootstrap: string | undefined;
   readonly workerConfig: CacheableWorkerConfig;
   readonly deletedPaths: string[];
   readonly modifiedTimes: Record<string, number>;
-}
-
-async function getLastCommit() {
-  const { stdout } = await execa(
-    'git',
-    ['log', '-n', '1', '--pretty=format:%H', '--', RELATIVE_DIR],
-    {
-      cwd: REPO_ROOT,
-    }
-  );
-
-  return stdout.trim() || undefined;
 }
 
 async function getBootstrapCacheKey() {
@@ -165,20 +148,12 @@ async function getBootstrapCacheKey() {
 }
 
 export async function getOptimizerCacheKey(config: OptimizerConfig) {
-  const [changes, lastCommit, bootstrap] = await Promise.all([
-    getChanges(OPTIMIZER_DIR),
-    getLastCommit(),
-    getBootstrapCacheKey(),
-  ] as const);
+  const [bootstrap] = await Promise.all([getBootstrapCacheKey()] as const);
 
   const deletedPaths: string[] = [];
   const modifiedPaths: string[] = [];
-  for (const [path, type] of changes) {
-    (type === 'deleted' ? deletedPaths : modifiedPaths).push(path);
-  }
 
   const cacheKeys: OptimizerCacheKey = {
-    lastCommit,
     bootstrap,
     deletedPaths,
     modifiedTimes: {} as Record<string, number>,

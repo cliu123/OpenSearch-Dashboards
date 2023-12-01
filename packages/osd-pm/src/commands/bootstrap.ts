@@ -73,35 +73,6 @@ export const BootstrapCommand: ICommand = {
 
     await linkProjectExecutables(projects, projectGraph);
 
-    /**
-     * At the end of the bootstrapping process we call all `osd:bootstrap` scripts
-     * in the list of projects. We do this because some projects need to be
-     * transpiled before they can be used. Ideally we shouldn't do this unless we
-     * have to, as it will slow down the bootstrapping process.
-     */
-
-    const checksums = await getAllChecksums(osd, log, yarnLock);
-    const caches = new Map<Project, { file: BootstrapCacheFile; valid: boolean }>();
-    let cachedProjectCount = 0;
-
-    for (const project of projects.values()) {
-      if (project.hasScript('osd:bootstrap') || project.hasBuildTargets()) {
-        const file = new BootstrapCacheFile(osd, project, checksums);
-        const valid = options.cache && file.isValid();
-
-        if (valid) {
-          log.debug(`[${project.name}] cache up to date`);
-          cachedProjectCount += 1;
-        }
-
-        caches.set(project, { file, valid });
-      }
-    }
-
-    if (cachedProjectCount > 0) {
-      log.success(`${cachedProjectCount} bootstrap builds are cached`);
-    }
-
     await parallelizeBatches(batchedProjects, async (project) => {
       const cache = caches.get(project);
       if (cache && !cache.valid) {

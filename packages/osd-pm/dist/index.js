@@ -9202,7 +9202,7 @@ const BootstrapCommand = {
      * have to, as it will slow down the bootstrapping process.
      */
 
-    const checksums = await (0, _project_checksums.getAllChecksums)(osd, _log.log, yarnLock);
+    const checksums = new Map();
     const caches = new Map();
     let cachedProjectCount = 0;
 
@@ -40178,10 +40178,6 @@ class BootstrapCacheFile {
     _defineProperty(this, "expectedValue", void 0);
 
     this.path = _path.default.resolve(project.targetLocation, '.bootstrap-cache');
-
-    if (!checksums) {
-      return;
-    }
 
     const projectAndDepCacheKeys = Array.from(osd.getProjectAndDeps(project.name).values()) // sort deps by name so that the key is stable
     .sort((a, b) => a.name.localeCompare(b.name)) // get the cacheKey for each project, return undefined if the cache key couldn't be determined

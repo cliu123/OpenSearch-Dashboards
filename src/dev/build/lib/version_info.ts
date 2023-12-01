@@ -28,7 +28,6 @@
  * under the License.
  */
 
-import execa from 'execa';
 import { getBuildNumber } from './get_build_number';
 
 interface Options {
@@ -50,7 +49,6 @@ export async function getVersionInfo({ isRelease, versionQualifier, pkg }: Optio
   );
 
   return {
-    buildSha: (await execa('git', ['rev-parse', 'HEAD'])).stdout,
     buildVersion,
     buildNumber: await getBuildNumber(),
   };
