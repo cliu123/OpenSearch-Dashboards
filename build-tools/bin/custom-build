@@ -1,0 +1,10 @@
+#!/bin/bash
+set -o errexit
+set -o pipefail
+
+echo "copy OSD Core source code to build folder"
+
+rm -rf build/opensearch-dashboards-core
+mkdir -p build/opensearch-dashboards-core
+
+rsync -arv . build/opensearch-dashboards-core --exclude=".git"
