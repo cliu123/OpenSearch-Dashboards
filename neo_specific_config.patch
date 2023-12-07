@@ -1,19 +1,65 @@
 diff --git a/config/opensearch_dashboards.yml b/config/opensearch_dashboards.yml
-index 45868c9571..b49065c156 100644
+index e9eea0000a..f19ad9a567 100644
 --- a/config/opensearch_dashboards.yml
 +++ b/config/opensearch_dashboards.yml
-@@ -282,4 +282,11 @@ data_source.authTypes:
- dynamoDBStorage.enabled: true
+@@ -5,6 +5,7 @@
+ # The default is 'localhost', which usually means remote machines will not be able to connect.
+ # To allow connections from remote users, set this parameter to a non-loopback address.
+ #server.host: "localhost"
++server.host: 0.0.0.0
  
- # Skip Kibana migrations
--migrations.skip: true
-\ No newline at end of file
+ # Enables you to specify a path to mount OpenSearch Dashboards at if you are running behind a proxy.
+ # Use the `server.rewriteBasePath` setting to tell OpenSearch Dashboards if it should remove the basePath
+@@ -24,6 +25,7 @@
+ 
+ # The URLs of the OpenSearch instances to use for all your queries.
+ #opensearch.hosts: ["http://localhost:9200"]
++opensearch.hosts: []
+ 
+ # OpenSearch Dashboards uses an index in OpenSearch to store saved searches, visualizations and
+ # dashboards. OpenSearch Dashboards creates a new index if the index doesn't already exist.
+@@ -235,8 +237,10 @@
+ # functionality in Visualization.
+ # vis_builder.enabled: false
+ 
+-# Set the value of this setting to true to enable multiple data source feature.
+-#data_source.enabled: false
++# Set the value of this setting to true to enable the experimental multiple data source
++# support feature. Use with caution.
++data_source.enabled: true
++data_source.defaultCluster: false
+ # Set the value of these settings to customize crypto materials to encryption saved credentials
+ # in data sources.
+ #data_source.encryption.wrappingKeyName: 'changeme'
+@@ -268,8 +272,31 @@
+ #    'ff00::/8',
+ # ]
+ 
++# Set enabled false to hide authentication method in OpenSearch Dashboards.
++# If this setting is commented then all 4 options will be available in OpenSearch Dashboards.
++# Default value will be considered to True.
++data_source.authTypes:
++  NoAuthentication:
++    enabled: false
++  UsernamePassword:
++    enabled: false
++  AWSSigV4:
++    enabled: false
++  TokenExchange:
++    enabled: true
++
+ # Set the value of this setting to false to hide the help menu link to the OpenSearch Dashboards user survey
+ # opensearchDashboards.survey.url: "https://survey.opensearch.org"
++dynamoDBStorage.enabled: true
+ 
+ # Set the value of this setting to true to enable plugin augmentation
+ # vis_augmenter.pluginAugmentationEnabled: true
++
 +migrations.skip: true
 +
 +# Config content-security-policy directives
-+csp.rules: ["base-uri 'none'","connect-src 'self'","default-src 'none'","font-src 'self'","frame-ancestors 'none'","img-src data: 'self'","object-src 'none'","script-src 'unsafe-eval' 'self'","style-src 'unsafe-inline' 'self'","worker-src blob: 'self'"]
++csp.rules: ["base-uri 'self'","connect-src 'self' vectors.maps.opensearch.org tiles.maps.opensearch.org maps.opensearch.org;","default-src 'none' data:;","font-src 'self'","frame-ancestors 'none'","img-src data: 'self' tiles.maps.opensearch.org;","object-src 'none'","script-src 'unsafe-eval' 'self';","style-src 'unsafe-inline' 'self'","worker-src blob: 'self'"]
 +
 +vis_type_timeline.enabled: false
-+vis_type_vega.enabled: false
++# vis_type_vega.enabled: false
 +vis_type_timeseries.enabled: false
-\ No newline at end of file
