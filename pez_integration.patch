@@ -283,6 +283,77 @@ index 0000000000..5bd1bdb515
 + */
 +
 +jest.mock('jose', () => {});
+diff --git a/src/plugins/data_source/server/client/client_config.ts b/src/plugins/data_source/server/client/client_config.ts
+index 5de71fe5dc..d2f0b193a5 100644
+--- a/src/plugins/data_source/server/client/client_config.ts
++++ b/src/plugins/data_source/server/client/client_config.ts
+@@ -17,6 +17,7 @@ export function parseClientOptions(
+   config: DataSourcePluginConfigType,
+   endpoint: string
+ ): ClientOptions {
++  endpoint = modifyVPCEndpoint(endpoint);
+   const clientOptions: ClientOptions = {
+     node: endpoint,
+     ssl: {
+@@ -27,3 +28,7 @@ export function parseClientOptions(
+ 
+   return clientOptions;
+ }
++
++function modifyVPCEndpoint(endpoint: string) {
++  return endpoint.replace(/(http|https):\/\/vpc-/, '$1://search-');
++}
+diff --git a/src/plugins/data_source/server/client/client_config.test.ts b/src/plugins/data_source/server/client/client_config.test.ts
+index c6dfff3fe4..e357dac26e 100644
+--- a/src/plugins/data_source/server/client/client_config.test.ts
++++ b/src/plugins/data_source/server/client/client_config.test.ts
+@@ -26,4 +26,46 @@ describe('parseClientOptions', () => {
+       })
+     );
+   });
++
++  test('should replace http://vpc-xxx with http://search-xxx in endpoint', () => {
++    const VPCEndpoint = 'http://vpc-xxxx.com';
++    const NonVPCEndpoint = 'http://search-xxxx.com';
++    expect(parseClientOptions(config, VPCEndpoint)).toEqual(
++      expect.objectContaining({
++        node: NonVPCEndpoint,
++        ssl: {
++          requestCert: true,
++          rejectUnauthorized: true,
++        },
++      })
++    );
++  });
++
++  test('should replace https://vpc-xxx with http://search-xxx in endpoint', () => {
++    const VPCEndpoint = 'https://vpc-xxxx.com';
++    const NonVPCEndpoint = 'https://search-xxxx.com';
++    expect(parseClientOptions(config, VPCEndpoint)).toEqual(
++      expect.objectContaining({
++        node: NonVPCEndpoint,
++        ssl: {
++          requestCert: true,
++          rejectUnauthorized: true,
++        },
++      })
++    );
++  });
++
++  test('should only replace first occurrence of vpc in https://vpc-xxxx-vpc-test.com in endpoint', () => {
++    const VPCEndpoint = 'https://vpc-xxxx-vpc-test.com';
++    const NonVPCEndpoint = 'https://search-xxxx-vpc-test.com';
++    expect(parseClientOptions(config, VPCEndpoint)).toEqual(
++      expect.objectContaining({
++        node: NonVPCEndpoint,
++        ssl: {
++          requestCert: true,
++          rejectUnauthorized: true,
++        },
++      })
++    );
++  });
+ });
 diff --git a/src/plugins/data_source/server/client/client_pool.ts b/src/plugins/data_source/server/client/client_pool.ts
 index aa8edad682..4b1f71e722 100644
 --- a/src/plugins/data_source/server/client/client_pool.ts

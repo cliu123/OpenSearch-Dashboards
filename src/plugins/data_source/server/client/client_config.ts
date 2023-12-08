@@ -17,6 +17,7 @@ export function parseClientOptions(
   config: DataSourcePluginConfigType,
   endpoint: string
 ): ClientOptions {
+  endpoint = modifyVPCEndpoint(endpoint);
   const clientOptions: ClientOptions = {
     node: endpoint,
     ssl: {
@@ -26,4 +27,8 @@ export function parseClientOptions(
   };
 
   return clientOptions;
+}
+
+function modifyVPCEndpoint(endpoint: string) {
+  return endpoint.replace(/(http|https):\/\/vpc-/, '$1://search-');
 }
