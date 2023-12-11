@@ -1,5 +1,5 @@
 diff --git a/config/opensearch_dashboards.yml b/config/opensearch_dashboards.yml
-index e9eea0000a..f19ad9a567 100644
+index e9eea0000a..a56e312738 100644
 --- a/config/opensearch_dashboards.yml
 +++ b/config/opensearch_dashboards.yml
 @@ -5,6 +5,7 @@
@@ -58,7 +58,7 @@ index e9eea0000a..f19ad9a567 100644
 +migrations.skip: true
 +
 +# Config content-security-policy directives
-+csp.rules: ["base-uri 'self'","connect-src 'self' vectors.maps.opensearch.org tiles.maps.opensearch.org maps.opensearch.org;","default-src 'none' data:;","font-src 'self'","frame-ancestors 'none'","img-src data: 'self' tiles.maps.opensearch.org;","object-src 'none'","script-src 'unsafe-eval' 'self';","style-src 'unsafe-inline' 'self'","worker-src blob: 'self'"]
++csp.rules: ["base-uri 'self'","connect-src 'self' vectors.maps.opensearch.org tiles.maps.opensearch.org maps.opensearch.org;","default-src 'self' data:;","font-src 'self'","frame-ancestors 'none'","img-src data: 'self' tiles.maps.opensearch.org;","object-src 'none'","script-src 'unsafe-eval' 'self';","style-src 'unsafe-inline' 'self'","worker-src blob: 'self'"]
 +
 +vis_type_timeline.enabled: false
 +# vis_type_vega.enabled: false

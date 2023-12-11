@@ -366,11 +366,6 @@ export const getSavedObjects = (): SavedObject[] => [
         id: '3ba638e0-b894-11e8-a6d9-e546fe2bba5f',
       },
       {
-        name: 'panel_10',
-        type: 'visualization',
-        id: '9c6f83f0-bb4d-11e8-9c84-77068524bcab',
-      },
-      {
         name: 'panel_11',
         type: 'visualization',
         id: 'b72dd430-bb4d-11e8-9c84-77068524bcab',
@@ -388,7 +383,7 @@ export const getSavedObjects = (): SavedObject[] => [
         defaultMessage: 'Analyze mock eCommerce orders and revenue',
       }),
       panelsJSON:
-        '[{"embeddableConfig":{},"gridData":{"x":12,"y":18,"w":36,"h":10,"i":"1"},"panelIndex":"1","version":"7.0.0-alpha1","panelRefName":"panel_0"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":12,"y":7,"w":12,"h":11,"i":"2"},"panelIndex":"2","version":"7.0.0-alpha1","panelRefName":"panel_1"},{"embeddableConfig":{},"gridData":{"x":0,"y":0,"w":18,"h":7,"i":"3"},"panelIndex":"3","version":"7.0.0-alpha1","panelRefName":"panel_2"},{"embeddableConfig":{},"gridData":{"x":18,"y":0,"w":30,"h":7,"i":"4"},"panelIndex":"4","version":"7.0.0-alpha1","panelRefName":"panel_3"},{"embeddableConfig":{},"gridData":{"x":0,"y":28,"w":48,"h":11,"i":"5"},"panelIndex":"5","version":"7.0.0-alpha1","panelRefName":"panel_4"},{"embeddableConfig":{},"gridData":{"x":0,"y":18,"w":12,"h":10,"i":"6"},"panelIndex":"6","version":"7.0.0-alpha1","panelRefName":"panel_5"},{"embeddableConfig":{},"gridData":{"x":0,"y":7,"w":12,"h":11,"i":"7"},"panelIndex":"7","version":"7.0.0-alpha1","panelRefName":"panel_6"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":24,"y":7,"w":12,"h":11,"i":"8"},"panelIndex":"8","version":"7.0.0-alpha1","panelRefName":"panel_7"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":36,"y":7,"w":12,"h":11,"i":"9"},"panelIndex":"9","version":"7.0.0-alpha1","panelRefName":"panel_8"},{"embeddableConfig":{},"gridData":{"x":0,"y":54,"w":48,"h":18,"i":"10"},"panelIndex":"10","version":"7.0.0-alpha1","panelRefName":"panel_9"},{"embeddableConfig":{"mapZoom":2,"mapCenter":[28.304380682962783,-22.148437500000004]},"gridData":{"x":0,"y":39,"w":24,"h":15,"i":"11"},"panelIndex":"11","version":"7.0.0-alpha1","panelRefName":"panel_10"},{"embeddableConfig":{},"gridData":{"x":24,"y":39,"w":24,"h":15,"i":"12"},"panelIndex":"12","version":"7.0.0-alpha1","panelRefName":"panel_11"}]',
+        '[{"embeddableConfig":{},"gridData":{"x":12,"y":18,"w":36,"h":10,"i":"1"},"panelIndex":"1","version":"7.0.0-alpha1","panelRefName":"panel_0"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":12,"y":7,"w":12,"h":11,"i":"2"},"panelIndex":"2","version":"7.0.0-alpha1","panelRefName":"panel_1"},{"embeddableConfig":{},"gridData":{"x":0,"y":0,"w":18,"h":7,"i":"3"},"panelIndex":"3","version":"7.0.0-alpha1","panelRefName":"panel_2"},{"embeddableConfig":{},"gridData":{"x":18,"y":0,"w":30,"h":7,"i":"4"},"panelIndex":"4","version":"7.0.0-alpha1","panelRefName":"panel_3"},{"embeddableConfig":{},"gridData":{"x":0,"y":28,"w":48,"h":11,"i":"5"},"panelIndex":"5","version":"7.0.0-alpha1","panelRefName":"panel_4"},{"embeddableConfig":{},"gridData":{"x":0,"y":18,"w":12,"h":10,"i":"6"},"panelIndex":"6","version":"7.0.0-alpha1","panelRefName":"panel_5"},{"embeddableConfig":{},"gridData":{"x":0,"y":7,"w":12,"h":11,"i":"7"},"panelIndex":"7","version":"7.0.0-alpha1","panelRefName":"panel_6"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":24,"y":7,"w":12,"h":11,"i":"8"},"panelIndex":"8","version":"7.0.0-alpha1","panelRefName":"panel_7"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":36,"y":7,"w":12,"h":11,"i":"9"},"panelIndex":"9","version":"7.0.0-alpha1","panelRefName":"panel_8"},{"embeddableConfig":{},"gridData":{"x":0,"y":54,"w":48,"h":18,"i":"10"},"panelIndex":"10","version":"7.0.0-alpha1","panelRefName":"panel_9"},{"embeddableConfig":{},"gridData":{"x":24,"y":39,"w":24,"h":15,"i":"12"},"panelIndex":"12","version":"7.0.0-alpha1","panelRefName":"panel_11"}]',
       optionsJSON: '{"hidePanelTitles":false,"useMargins":true}',
       version: 1,
       timeRestore: true,
