@@ -84,7 +84,7 @@ describe('sample data install route', () => {
     expect(mockResponse.ok.mock.calls[0][0]).toMatchObject({
       body: {
         opensearchIndicesCreated: { opensearch_dashboards_sample_data_flights: 13059 },
-        opensearchDashboardsSavedObjectsLoaded: 20,
+        opensearchDashboardsSavedObjectsLoaded: 17,
       },
     });
   });
@@ -153,7 +153,7 @@ describe('sample data install route', () => {
     expect(mockResponse.ok.mock.calls[0][0]).toMatchObject({
       body: {
         opensearchIndicesCreated: { opensearch_dashboards_sample_data_flights: 13059 },
-        opensearchDashboardsSavedObjectsLoaded: 20,
+        opensearchDashboardsSavedObjectsLoaded: 17,
       },
     });
   });

@@ -121,27 +121,6 @@ export const getSavedObjects = (): SavedObject[] => [
     references: [],
   },
   {
-    id: '45e07720-b890-11e8-a6d9-e546fe2bba5f',
-    type: 'visualization',
-    updated_at: '2018-10-01T15:17:30.755Z',
-    version: '2',
-    migrationVersion: {},
-    attributes: {
-      title: i18n.translate('home.sampleData.ecommerceSpec.promotionTrackingTitle', {
-        defaultMessage: '[eCommerce] Promotion Tracking',
-      }),
-      visState:
-        '{"title":"[eCommerce] Promotion Tracking","type":"metrics","params":{"id":"61ca57f0-469d-11e7-af02-69e470af7417","type":"timeseries","series":[{"id":"ea20ae70-b88d-11e8-a451-f37365e9f268","color":"#54B399","split_mode":"everything","metrics":[{"id":"ea20ae71-b88d-11e8-a451-f37365e9f268","type":"sum","field":"taxful_total_price"}],"separate_axis":0,"axis_position":"right","formatter":"number","chart_type":"line","line_width":1,"point_size":1,"fill":"0.7","stacked":"none","filter":"products.product_name:*trouser*","label":"Revenue Trousers","value_template":"${{value}}"},{"id":"062d77b0-b88e-11e8-a451-f37365e9f268","color":"#6092C0","split_mode":"everything","metrics":[{"id":"062d77b1-b88e-11e8-a451-f37365e9f268","type":"sum","field":"taxful_total_price"}],"separate_axis":0,"axis_position":"right","formatter":"number","chart_type":"line","line_width":1,"point_size":1,"fill":"0.7","stacked":"none","filter":"products.product_name:*watch*","label":"Revenue Watches","value_template":"${{value}}"},{"id":"61ca57f1-469d-11e7-af02-69e470af7417","color":"#D36086","split_mode":"everything","metrics":[{"id":"61ca57f2-469d-11e7-af02-69e470af7417","type":"sum","field":"taxful_total_price"}],"separate_axis":0,"axis_position":"right","formatter":"number","chart_type":"line","line_width":1,"point_size":1,"fill":"0.7","stacked":"none","filter":"products.product_name:*bag*","label":"Revenue Bags","value_template":"${{value}}"},{"id":"faa2c170-b88d-11e8-a451-f37365e9f268","color":"#9170B8","split_mode":"everything","metrics":[{"id":"faa2c171-b88d-11e8-a451-f37365e9f268","type":"sum","field":"taxful_total_price"}],"separate_axis":0,"axis_position":"right","formatter":"number","chart_type":"line","line_width":1,"point_size":1,"fill":"0.7","stacked":"none","filter":"products.product_name:*cocktail dress*","label":"Revenue Cocktail Dresses","value_template":"${{value}}"}],"time_field":"order_date","index_pattern":"opensearch_dashboards_sample_data_ecommerce","interval":">=12h","axis_position":"left","axis_formatter":"number","axis_scale":"normal","show_legend":1,"show_grid":1,"legend_position":"bottom","annotations":[{"fields":"taxful_total_price","template":"Ring the bell! ${{taxful_total_price}}","index_pattern":"opensearch_dashboards_sample_data_ecommerce","query_string":"taxful_total_price:>250","id":"c8c30be0-b88f-11e8-a451-f37365e9f268","color":"#E7664C","time_field":"order_date","icon":"fa-bell","ignore_global_filters":1,"ignore_panel_filters":1}]},"aggs":[]}',
-      uiStateJSON: '{}',
-      description: '',
-      version: 1,
-      kibanaSavedObjectMeta: {
-        searchSourceJSON: '{"query":{"query":"","language":"kuery"},"filter":[]}',
-      },
-    },
-    references: [],
-  },
-  {
     id: '10f1a240-b891-11e8-a6d9-e546fe2bba5f',
     type: 'visualization',
     updated_at: '2018-10-01T15:13:03.270Z',
@@ -159,27 +138,6 @@ export const getSavedObjects = (): SavedObject[] => [
       kibanaSavedObjectMeta: {
         searchSourceJSON:
           '{"index":"ff959d40-b880-11e8-a6d9-e546fe2bba5f","query":{"query":"","language":"kuery"},"filter":[]}',
-      },
-    },
-    references: [],
-  },
-  {
-    id: 'b80e6540-b891-11e8-a6d9-e546fe2bba5f',
-    type: 'visualization',
-    updated_at: '2018-10-01T15:13:03.270Z',
-    version: '1',
-    migrationVersion: {},
-    attributes: {
-      title: i18n.translate('home.sampleData.ecommerceSpec.soldProductsPerDayTitle', {
-        defaultMessage: '[eCommerce] Sold Products per Day',
-      }),
-      visState:
-        '{"title":"[eCommerce] Sold Products per Day","type":"metrics","params":{"id":"61ca57f0-469d-11e7-af02-69e470af7417","type":"gauge","series":[{"id":"61ca57f1-469d-11e7-af02-69e470af7417","color":"#54B399","split_mode":"everything","metrics":[{"id":"61ca57f2-469d-11e7-af02-69e470af7417","type":"count"}],"separate_axis":0,"axis_position":"right","formatter":"number","chart_type":"line","line_width":1,"point_size":1,"fill":0.5,"stacked":"none","label":"Trxns / day"}],"time_field":"order_date","index_pattern":"opensearch_dashboards_sample_data_ecommerce","interval":"1d","axis_position":"left","axis_formatter":"number","axis_scale":"normal","show_legend":1,"show_grid":1,"gauge_color_rules":[{"value":150,"id":"6da070c0-b891-11e8-b645-195edeb9de84","gauge":"#54B399","operator":"gte"},{"value":150,"id":"9b0cdbc0-b891-11e8-b645-195edeb9de84","gauge":"#E7664C","operator":"lt"}],"gauge_width":"15","gauge_inner_width":10,"gauge_style":"half","filter":"","gauge_max":"300"},"aggs":[]}',
-      uiStateJSON: '{}',
-      description: '',
-      version: 1,
-      kibanaSavedObjectMeta: {
-        searchSourceJSON: '{"query":{"query":"","language":"kuery"},"filter":[]}',
       },
     },
     references: [],
@@ -251,28 +209,6 @@ export const getSavedObjects = (): SavedObject[] => [
     references: [],
   },
   {
-    id: '9c6f83f0-bb4d-11e8-9c84-77068524bcab',
-    type: 'visualization',
-    updated_at: '2018-10-01T15:13:03.270Z',
-    version: '1',
-    migrationVersion: {},
-    attributes: {
-      title: i18n.translate('home.sampleData.ecommerceSpec.salesCountMapTitle', {
-        defaultMessage: '[eCommerce] Sales Count Map',
-      }),
-      visState:
-        '{"title":"[eCommerce] Sales Count Map","type":"vega","aggs":[],"params":{"spec":"{\\n  $schema: https://vega.github.io/schema/vega/v5.json\\n  config: {\\n    kibana: {type: \\"map\\", latitude: 25, longitude: -40, zoom: 3}\\n  }\\n  data: [\\n    {\\n      name: table\\n      url: {\\n        index: opensearch_dashboards_sample_data_ecommerce\\n        %context%: true\\n        %timefield%: order_date\\n        body: {\\n          size: 0\\n          aggs: {\\n            gridSplit: {\\n              geotile_grid: {field: \\"geoip.location\\", precision: 4, size: 10000}\\n              aggs: {\\n                gridCentroid: {\\n                  geo_centroid: {\\n                    field: \\"geoip.location\\"\\n                  }\\n                }\\n              }\\n            }\\n          }\\n        }\\n      }\\n      format: {property: \\"aggregations.gridSplit.buckets\\"}\\n      transform: [\\n        {\\n          type: geopoint\\n          projection: projection\\n          fields: [\\n            gridCentroid.location.lon\\n            gridCentroid.location.lat\\n          ]\\n        }\\n      ]\\n    }\\n  ]\\n  scales: [\\n    {\\n      name: gridSize\\n      type: linear\\n      domain: {data: \\"table\\", field: \\"doc_count\\"}\\n      range: [\\n        50\\n        1000\\n      ]\\n    }\\n  ]\\n  marks: [\\n    {\\n      name: gridMarker\\n      type: symbol\\n      from: {data: \\"table\\"}\\n      encode: {\\n        update: {\\n          size: {scale: \\"gridSize\\", field: \\"doc_count\\"}\\n          xc: {signal: \\"datum.x\\"}\\n          yc: {signal: \\"datum.y\\"}\\n        }\\n      }\\n    },\\n    {\\n      name: gridLabel\\n      type: text\\n      from: {data: \\"table\\"}\\n      encode: {\\n        enter: {\\n          fill: {value: \\"#E7664C\\"}\\n          text: {signal: \\"datum.doc_count\\"}\\n        }\\n        update: {\\n          x: {signal: \\"datum.x\\"}\\n          y: {signal: \\"datum.y\\"}\\n          dx: {value: -6}\\n          dy: {value: 6}\\n          fontSize: {value: 18}\\n          fontWeight: {value: \\"bold\\"}\\n        }\\n      }\\n    }\\n  ]\\n}"}}',
-      uiStateJSON: '{}',
-      description: '',
-      version: 1,
-      kibanaSavedObjectMeta: {
-        searchSourceJSON:
-          '{"index":"ff959d40-b880-11e8-a6d9-e546fe2bba5f","query":{"query":"","language":"kuery"},"filter":[]}',
-      },
-    },
-    references: [],
-  },
-  {
     id: 'b72dd430-bb4d-11e8-9c84-77068524bcab',
     type: 'visualization',
     updated_at: '2018-10-01T15:13:03.270Z',
@@ -336,19 +272,9 @@ export const getSavedObjects = (): SavedObject[] => [
         id: '1c389590-b88d-11e8-a6d9-e546fe2bba5f',
       },
       {
-        name: 'panel_4',
-        type: 'visualization',
-        id: '45e07720-b890-11e8-a6d9-e546fe2bba5f',
-      },
-      {
         name: 'panel_5',
         type: 'visualization',
         id: '10f1a240-b891-11e8-a6d9-e546fe2bba5f',
-      },
-      {
-        name: 'panel_6',
-        type: 'visualization',
-        id: 'b80e6540-b891-11e8-a6d9-e546fe2bba5f',
       },
       {
         name: 'panel_7',
@@ -383,7 +309,7 @@ export const getSavedObjects = (): SavedObject[] => [
         defaultMessage: 'Analyze mock eCommerce orders and revenue',
       }),
       panelsJSON:
-        '[{"embeddableConfig":{},"gridData":{"x":12,"y":18,"w":36,"h":10,"i":"1"},"panelIndex":"1","version":"7.0.0-alpha1","panelRefName":"panel_0"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":12,"y":7,"w":12,"h":11,"i":"2"},"panelIndex":"2","version":"7.0.0-alpha1","panelRefName":"panel_1"},{"embeddableConfig":{},"gridData":{"x":0,"y":0,"w":18,"h":7,"i":"3"},"panelIndex":"3","version":"7.0.0-alpha1","panelRefName":"panel_2"},{"embeddableConfig":{},"gridData":{"x":18,"y":0,"w":30,"h":7,"i":"4"},"panelIndex":"4","version":"7.0.0-alpha1","panelRefName":"panel_3"},{"embeddableConfig":{},"gridData":{"x":0,"y":28,"w":48,"h":11,"i":"5"},"panelIndex":"5","version":"7.0.0-alpha1","panelRefName":"panel_4"},{"embeddableConfig":{},"gridData":{"x":0,"y":18,"w":12,"h":10,"i":"6"},"panelIndex":"6","version":"7.0.0-alpha1","panelRefName":"panel_5"},{"embeddableConfig":{},"gridData":{"x":0,"y":7,"w":12,"h":11,"i":"7"},"panelIndex":"7","version":"7.0.0-alpha1","panelRefName":"panel_6"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":24,"y":7,"w":12,"h":11,"i":"8"},"panelIndex":"8","version":"7.0.0-alpha1","panelRefName":"panel_7"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":36,"y":7,"w":12,"h":11,"i":"9"},"panelIndex":"9","version":"7.0.0-alpha1","panelRefName":"panel_8"},{"embeddableConfig":{},"gridData":{"x":0,"y":54,"w":48,"h":18,"i":"10"},"panelIndex":"10","version":"7.0.0-alpha1","panelRefName":"panel_9"},{"embeddableConfig":{},"gridData":{"x":24,"y":39,"w":24,"h":15,"i":"12"},"panelIndex":"12","version":"7.0.0-alpha1","panelRefName":"panel_11"}]',
+        '[{"embeddableConfig":{},"gridData":{"x":0,"y":18,"w":48,"h":9,"i":"1"},"panelIndex":"1","version":"7.0.0-alpha1","panelRefName":"panel_0"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":12,"y":7,"w":12,"h":11,"i":"2"},"panelIndex":"2","version":"7.0.0-alpha1","panelRefName":"panel_1"},{"embeddableConfig":{},"gridData":{"x":0,"y":0,"w":18,"h":7,"i":"3"},"panelIndex":"3","version":"7.0.0-alpha1","panelRefName":"panel_2"},{"embeddableConfig":{},"gridData":{"x":18,"y":0,"w":30,"h":7,"i":"4"},"panelIndex":"4","version":"7.0.0-alpha1","panelRefName":"panel_3"},{"embeddableConfig":{},"gridData":{"x":0,"y":7,"w":12,"h":11,"i":"6"},"panelIndex":"6","version":"7.0.0-alpha1","panelRefName":"panel_5"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":24,"y":7,"w":12,"h":11,"i":"8"},"panelIndex":"8","version":"7.0.0-alpha1","panelRefName":"panel_7"},{"embeddableConfig":{"vis":{"legendOpen":false}},"gridData":{"x":36,"y":7,"w":12,"h":11,"i":"9"},"panelIndex":"9","version":"7.0.0-alpha1","panelRefName":"panel_8"},{"embeddableConfig":{},"gridData":{"x":0,"y":41,"w":48,"h":18,"i":"10"},"panelIndex":"10","version":"7.0.0-alpha1","panelRefName":"panel_9"},{"embeddableConfig":{},"gridData":{"x":0,"y":27,"w":48,"h":14,"i":"12"},"panelIndex":"12","version":"7.0.0-alpha1","panelRefName":"panel_11"}]',
       optionsJSON: '{"hidePanelTitles":false,"useMargins":true}',
       version: 1,
       timeRestore: true,

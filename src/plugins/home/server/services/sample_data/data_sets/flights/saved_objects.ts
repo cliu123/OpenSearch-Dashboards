@@ -156,27 +156,6 @@ export const getSavedObjects = (): SavedObject[] => [
     references: [],
   },
   {
-    id: 'bcb63b50-4c89-11e8-b3d7-01146121b73d',
-    type: 'visualization',
-    updated_at: '2018-05-09T15:49:03.736Z',
-    version: '1',
-    migrationVersion: {},
-    attributes: {
-      title: i18n.translate('home.sampleData.flightsSpec.delaysAndCancellationsTitle', {
-        defaultMessage: '[Flights] Delays & Cancellations',
-      }),
-      visState:
-        '{"title":"[Flights] Delays & Cancellations","type":"metrics","params":{"id":"61ca57f0-469d-11e7-af02-69e470af7417","type":"timeseries","series":[{"id":"61ca57f1-469d-11e7-af02-69e470af7417","color":"#54B399","split_mode":"everything","metrics":[{"id":"61ca57f2-469d-11e7-af02-69e470af7417","type":"filter_ratio","numerator":"FlightDelay:true"}],"separate_axis":0,"axis_position":"right","formatter":"percent","chart_type":"line","line_width":"2","point_size":"0","fill":0.5,"stacked":"none","label":"Percent Delays"}],"time_field":"timestamp","index_pattern":"opensearch_dashboards_sample_data_flights","interval":">=1h","axis_position":"left","axis_formatter":"number","show_legend":1,"show_grid":1,"annotations":[{"fields":"FlightDelay,Cancelled,Carrier","template":"{{Carrier}}: Flight Delayed and Cancelled!","index_pattern":"opensearch_dashboards_sample_data_flights","query_string":"FlightDelay:true AND Cancelled:true","id":"53b7dff0-4c89-11e8-a66a-6989ad5a0a39","color":"#E7664C","time_field":"timestamp","icon":"fa-exclamation-triangle","ignore_global_filters":1,"ignore_panel_filters":1}],"legend_position":"bottom"},"aggs":[]}',
-      uiStateJSON: '{}',
-      description: '',
-      version: 1,
-      kibanaSavedObjectMeta: {
-        searchSourceJSON: '{}',
-      },
-    },
-    references: [],
-  },
-  {
     id: '9886b410-4c8b-11e8-b3d7-01146121b73d',
     type: 'visualization',
     updated_at: '2018-05-09T15:49:03.736Z',
@@ -281,27 +260,6 @@ export const getSavedObjects = (): SavedObject[] => [
       version: 1,
       kibanaSavedObjectMeta: {
         searchSourceJSON: '{}',
-      },
-    },
-    references: [],
-  },
-  {
-    id: '334084f0-52fd-11e8-a160-89cc2ad9e8e2',
-    type: 'visualization',
-    updated_at: '2018-05-09T15:49:03.736Z',
-    version: '1',
-    migrationVersion: {},
-    attributes: {
-      title: i18n.translate('home.sampleData.flightsSpec.departuresCountMapTitle', {
-        defaultMessage: '[Flights] Departures Count Map',
-      }),
-      visState: '{\"title\":\"[Flights] Departure Count Map\",\"type\":\"vega\",\"aggs\":[],\"params\":{\"spec\":\"{\\n  $schema: https://vega.github.io/schema/vega/v5.json\\n  config: {\\n    kibana: {type: \\\"map\\\", latitude: 25, longitude: -40, zoom: 3}\\n  }\\n  data: [\\n    {\\n      name: table\\n      url: {\\n        index: opensearch_dashboards_sample_data_flights\\n        %context%: true\\n        %timefield%: timestamp\\n        body: {\\n          size: 0\\n          aggs: {\\n            gridSplit: {\\n              geotile_grid: {field: \\\"OriginLocation\\\", precision: 4, size: 10000}\\n              aggs: {\\n                gridCentroid: {\\n                  geo_centroid: {\\n                    field: \\\"OriginLocation\\\"\\n                  }\\n                }\\n              }\\n            }\\n          }\\n        }\\n      }\\n      format: {property: \\\"aggregations.gridSplit.buckets\\\"}\\n      transform: [\\n        {\\n          type: geopoint\\n          projection: projection\\n          fields: [\\n            gridCentroid.location.lon\\n            gridCentroid.location.lat\\n          ]\\n        }\\n      ]\\n    }\\n  ]\\n  scales: [\\n    {\\n      name: gridSize\\n      type: linear\\n      domain: {data: \\\"table\\\", field: \\\"doc_count\\\"}\\n      range: [\\n        50\\n        1000\\n      ]\\n    }\\n  ]\\n  marks: [\\n    {\\n      name: gridMarker\\n      type: symbol\\n      from: {data: \\\"table\\\"}\\n      encode: {\\n        update: {\\n          size: {scale: \\\"gridSize\\\", field: \\\"doc_count\\\"}\\n          xc: {signal: \\\"datum.x\\\"}\\n          yc: {signal: \\\"datum.y\\\"}\\n          tooltip: {\\n            signal: \\\"{flights: datum.doc_count}\\\"\\n          }\\n        }\\n      }\\n    }\\n  ]\\n}\"}}',
-      uiStateJSON: '{}',
-      description: '',
-      version: 1,
-      kibanaSavedObjectMeta: {
-        searchSourceJSON:
-          '{"index":"d3d7af60-4c81-11e8-b3d7-01146121b73d","filter":[],"query":{"query":"","language":"kuery"}}',
       },
     },
     references: [],
@@ -420,27 +378,6 @@ export const getSavedObjects = (): SavedObject[] => [
     references: [],
   },
   {
-    id: 'ed78a660-53a0-11e8-acbd-0be0ad9d822b',
-    type: 'visualization',
-    updated_at: '2018-05-09T15:55:51.195Z',
-    version: '3',
-    migrationVersion: {},
-    attributes: {
-      title: i18n.translate('home.sampleData.flightsSpec.airportConnectionsTitle', {
-        defaultMessage: '[Flights] Airport Connections (Hover Over Airport)',
-      }),
-      visState:
-        '{"aggs":[],"params":{"spec":"{\\n  $schema: https://vega.github.io/schema/vega/v5.json\\n  config: {\\n    kibana: {type: \\"map\\", latitude: 25, longitude: -70, zoom: 3}\\n  }\\n  data: [\\n    {\\n      name: table\\n      url: {\\n        index: opensearch_dashboards_sample_data_flights\\n        %context%: true\\n        // Uncomment to enable time filtering\\n        // %timefield%: timestamp\\n        body: {\\n          size: 0\\n          aggs: {\\n            origins: {\\n              terms: {field: \\"OriginAirportID\\", size: 10000}\\n              aggs: {\\n                originLocation: {\\n                  top_hits: {\\n                    size: 1\\n                    _source: {\\n                      includes: [\\"OriginLocation\\", \\"Origin\\"]\\n                    }\\n                  }\\n                }\\n                distinations: {\\n                  terms: {field: \\"DestAirportID\\", size: 10000}\\n                  aggs: {\\n                    destLocation: {\\n                      top_hits: {\\n                        size: 1\\n                        _source: {\\n                          includes: [\\"DestLocation\\"]\\n                        }\\n                      }\\n                    }\\n                  }\\n                }\\n              }\\n            }\\n          }\\n        }\\n      }\\n      format: {property: \\"aggregations.origins.buckets\\"}\\n      transform: [\\n        {\\n          type: geopoint\\n          projection: projection\\n          fields: [\\n            originLocation.hits.hits[0]._source.OriginLocation.lon\\n            originLocation.hits.hits[0]._source.OriginLocation.lat\\n          ]\\n        }\\n      ]\\n    }\\n    {\\n      name: selectedDatum\\n      on: [\\n        {trigger: \\"!selected\\", remove: true}\\n        {trigger: \\"selected\\", insert: \\"selected\\"}\\n      ]\\n    }\\n  ]\\n  signals: [\\n    {\\n      name: selected\\n      value: null\\n      on: [\\n        {events: \\"@airport:mouseover\\", update: \\"datum\\"}\\n        {events: \\"@airport:mouseout\\", update: \\"null\\"}\\n      ]\\n    }\\n  ]\\n  scales: [\\n    {\\n      name: airportSize\\n      type: linear\\n      domain: {data: \\"table\\", field: \\"doc_count\\"}\\n      range: [\\n        {signal: \\"zoom*zoom*0.2+1\\"}\\n        {signal: \\"zoom*zoom*10+1\\"}\\n      ]\\n    }\\n  ]\\n  marks: [\\n    {\\n      type: group\\n      from: {\\n        facet: {\\n          name: facetedDatum\\n          data: selectedDatum\\n          field: distinations.buckets\\n        }\\n      }\\n      data: [\\n        {\\n          name: facetDatumElems\\n          source: facetedDatum\\n          transform: [\\n            {\\n              type: geopoint\\n              projection: projection\\n              fields: [\\n                destLocation.hits.hits[0]._source.DestLocation.lon\\n                destLocation.hits.hits[0]._source.DestLocation.lat\\n              ]\\n            }\\n            {type: \\"formula\\", expr: \\"{x:parent.x, y:parent.y}\\", as: \\"source\\"}\\n            {type: \\"formula\\", expr: \\"{x:datum.x, y:datum.y}\\", as: \\"target\\"}\\n            {type: \\"linkpath\\", shape: \\"diagonal\\"}\\n          ]\\n        }\\n      ]\\n      scales: [\\n        {\\n          name: lineThickness\\n          type: log\\n          clamp: true\\n          range: [1, 8]\\n        }\\n        {\\n          name: lineOpacity\\n          type: log\\n          clamp: true\\n          range: [0.2, 0.8]\\n        }\\n      ]\\n      marks: [\\n        {\\n          from: {data: \\"facetDatumElems\\"}\\n          type: path\\n          interactive: false\\n          encode: {\\n            update: {\\n              path: {field: \\"path\\"}\\n              stroke: {value: \\"black\\"}\\n              strokeWidth: {scale: \\"lineThickness\\", field: \\"doc_count\\"}\\n              strokeOpacity: {scale: \\"lineOpacity\\", field: \\"doc_count\\"}\\n            }\\n          }\\n        }\\n      ]\\n    }\\n    {\\n      name: airport\\n      type: symbol\\n      from: {data: \\"table\\"}\\n      encode: {\\n        update: {\\n          size: {scale: \\"airportSize\\", field: \\"doc_count\\"}\\n          xc: {signal: \\"datum.x\\"}\\n          yc: {signal: \\"datum.y\\"}\\n          tooltip: {\\n            signal: \\"{title: datum.originLocation.hits.hits[0]._source.Origin + \' (\' + datum.key + \')\', connnections: length(datum.distinations.buckets), flights: datum.doc_count}\\"\\n          }\\n        }\\n      }\\n    }\\n  ]\\n}"},"title":"[Flights] Airport Connections (Hover Over Airport)","type":"vega"}',
-      uiStateJSON: '{}',
-      description: '',
-      version: 1,
-      kibanaSavedObjectMeta: {
-        searchSourceJSON: '{"query":{"query":"","language":"kuery"},"filter":[]}',
-      },
-    },
-    references: [],
-  },
-  {
     id: 'd3d7af60-4c81-11e8-b3d7-01146121b73d',
     type: 'index-pattern',
     updated_at: '2018-05-09T15:49:03.736Z',
@@ -486,11 +423,6 @@ export const getSavedObjects = (): SavedObject[] => [
         name: 'panel_4',
         type: 'visualization',
         id: 'f8290060-4c88-11e8-b3d7-01146121b73d',
-      },
-      {
-        name: 'panel_5',
-        type: 'visualization',
-        id: 'bcb63b50-4c89-11e8-b3d7-01146121b73d',
       },
       {
         name: 'panel_6',
@@ -559,7 +491,7 @@ export const getSavedObjects = (): SavedObject[] => [
         }
       ),
       panelsJSON:
-        '[{"panelIndex":"1","gridData":{"x":0,"y":0,"w":32,"h":7,"i":"1"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_0"},{"panelIndex":"3","gridData":{"x":17,"y":7,"w":23,"h":12,"i":"3"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_1"},{"panelIndex":"4","gridData":{"x":0,"y":85,"w":48,"h":15,"i":"4"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_2"},{"panelIndex":"5","gridData":{"x":0,"y":7,"w":17,"h":12,"i":"5"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_3"},{"panelIndex":"6","gridData":{"x":24,"y":33,"w":24,"h":14,"i":"6"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_4"},{"panelIndex":"7","gridData":{"x":24,"y":19,"w":24,"h":14,"i":"7"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_5"},{"panelIndex":"10","gridData":{"x":0,"y":35,"w":24,"h":12,"i":"10"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_6"},{"panelIndex":"13","gridData":{"x":10,"y":19,"w":14,"h":8,"i":"13"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_7"},{"panelIndex":"14","gridData":{"x":10,"y":27,"w":14,"h":8,"i":"14"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_8"},{"panelIndex":"21","gridData":{"x":0,"y":62,"w":48,"h":8,"i":"21"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_10"},{"panelIndex":"22","gridData":{"x":32,"y":0,"w":16,"h":7,"i":"22"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_11"},{"panelIndex":"25","gridData":{"x":0,"y":19,"w":10,"h":8,"i":"25"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_13"},{"panelIndex":"27","gridData":{"x":0,"y":27,"w":10,"h":8,"i":"27"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_14"},{"panelIndex":"28","gridData":{"x":0,"y":47,"w":24,"h":15,"i":"28"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_15"},{"panelIndex":"29","gridData":{"x":40,"y":7,"w":8,"h":6,"i":"29"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_16"},{"panelIndex":"30","gridData":{"x":40,"y":13,"w":8,"h":6,"i":"30"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_17"}]',
+        '[{"panelIndex":"1","gridData":{"x":0,"y":0,"w":32,"h":7,"i":"1"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_0"},{"panelIndex":"3","gridData":{"x":17,"y":7,"w":23,"h":12,"i":"3"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_1"},{"panelIndex":"4","gridData":{"x":0,"y":55,"w":48,"h":15,"i":"4"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_2"},{"panelIndex":"5","gridData":{"x":0,"y":7,"w":17,"h":12,"i":"5"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_3"},{"panelIndex":"6","gridData":{"x":24,"y":19,"w":24,"h":14,"i":"6"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_4"},{"panelIndex":"10","gridData":{"x":0,"y":35,"w":24,"h":12,"i":"10"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_6"},{"panelIndex":"13","gridData":{"x":10,"y":19,"w":14,"h":8,"i":"13"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_7"},{"panelIndex":"14","gridData":{"x":10,"y":27,"w":14,"h":8,"i":"14"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_8"},{"panelIndex":"21","gridData":{"x":0,"y":47,"w":48,"h":8,"i":"21"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_10"},{"panelIndex":"22","gridData":{"x":32,"y":0,"w":16,"h":7,"i":"22"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_11"},{"panelIndex":"25","gridData":{"x":0,"y":19,"w":10,"h":8,"i":"25"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_13"},{"panelIndex":"27","gridData":{"x":0,"y":27,"w":10,"h":8,"i":"27"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_14"},{"panelIndex":"28","gridData":{"x":24,"y":33,"w":24,"h":14,"i":"28"},"embeddableConfig":{"vis":{"legendOpen":false}},"version":"6.3.0","panelRefName":"panel_15"},{"panelIndex":"29","gridData":{"x":40,"y":7,"w":8,"h":6,"i":"29"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_16"},{"panelIndex":"30","gridData":{"x":40,"y":13,"w":8,"h":6,"i":"30"},"embeddableConfig":{},"version":"6.3.0","panelRefName":"panel_17"}]',
       optionsJSON: '{"hidePanelTitles":false,"useMargins":true}',
       version: 1,
       timeRestore: true,
