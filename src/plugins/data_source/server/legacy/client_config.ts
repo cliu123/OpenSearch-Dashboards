@@ -5,6 +5,7 @@
 
 import { ConfigOptions } from 'elasticsearch';
 import { DataSourcePluginConfigType } from '../../config';
+import { modifyVPCEndpoint } from '../util/endpoint_validator';
 
 /**
  * Parse the client options from given data source config and endpoint
@@ -17,6 +18,7 @@ export function parseClientOptions(
   config: DataSourcePluginConfigType,
   endpoint: string
 ): ConfigOptions {
+  endpoint = modifyVPCEndpoint(endpoint);
   const configOptions: ConfigOptions = {
     host: endpoint,
     ssl: {

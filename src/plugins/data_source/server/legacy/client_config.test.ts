@@ -25,4 +25,43 @@ describe('parseClientOptions', () => {
       })
     );
   });
+
+  test('should replace http://vpc-xxx with http://search-xxx in endpoint', () => {
+    const VPCEndpoint = 'http://vpc-xxxx.com';
+    const NonVPCEndpoint = 'http://search-xxxx.com';
+    expect(parseClientOptions(config, VPCEndpoint)).toEqual(
+      expect.objectContaining({
+        host: NonVPCEndpoint,
+        ssl: {
+          rejectUnauthorized: true,
+        },
+      })
+    );
+  });
+
+  test('should replace https://vpc-xxx with http://search-xxx in endpoint', () => {
+    const VPCEndpoint = 'https://vpc-xxxx.com';
+    const NonVPCEndpoint = 'https://search-xxxx.com';
+    expect(parseClientOptions(config, VPCEndpoint)).toEqual(
+      expect.objectContaining({
+        host: NonVPCEndpoint,
+        ssl: {
+          rejectUnauthorized: true,
+        },
+      })
+    );
+  });
+
+  test('should only replace first occurrence of vpc in https://vpc-xxxx-vpc-test.com in endpoint', () => {
+    const VPCEndpoint = 'https://vpc-xxxx-vpc-test.com';
+    const NonVPCEndpoint = 'https://search-xxxx-vpc-test.com';
+    expect(parseClientOptions(config, VPCEndpoint)).toEqual(
+      expect.objectContaining({
+        host: NonVPCEndpoint,
+        ssl: {
+          rejectUnauthorized: true,
+        },
+      })
+    );
+  });
 });

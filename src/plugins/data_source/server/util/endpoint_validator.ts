@@ -57,3 +57,7 @@ function getIpAddress(urlObject: URL) {
   }
   return null;
 }
+
+export function modifyVPCEndpoint(endpoint: string) {
+  return endpoint.replace(/(http|https):\/\/vpc-/, '$1://search-');
+}

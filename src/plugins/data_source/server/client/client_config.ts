@@ -5,6 +5,7 @@
 
 import { ClientOptions } from '@opensearch-project/opensearch-next';
 import { DataSourcePluginConfigType } from '../../config';
+import { modifyVPCEndpoint } from '../util/endpoint_validator';
 
 /**
  * Parse the client options from given data source config and endpoint
@@ -27,8 +28,4 @@ export function parseClientOptions(
   };
 
   return clientOptions;
-}
-
-function modifyVPCEndpoint(endpoint: string) {
-  return endpoint.replace(/(http|https):\/\/vpc-/, '$1://search-');
 }

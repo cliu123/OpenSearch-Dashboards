@@ -284,10 +284,18 @@ index 0000000000..5bd1bdb515
 +
 +jest.mock('jose', () => {});
 diff --git a/src/plugins/data_source/server/client/client_config.ts b/src/plugins/data_source/server/client/client_config.ts
-index 5de71fe5dc..d2f0b193a5 100644
+index 5de71fe5dc..1fa943357e 100644
 --- a/src/plugins/data_source/server/client/client_config.ts
 +++ b/src/plugins/data_source/server/client/client_config.ts
-@@ -17,6 +17,7 @@ export function parseClientOptions(
+@@ -5,6 +5,7 @@
+ 
+ import { ClientOptions } from '@opensearch-project/opensearch-next';
+ import { DataSourcePluginConfigType } from '../../config';
++import { modifyVPCEndpoint } from '../util/endpoint_validator';
+ 
+ /**
+  * Parse the client options from given data source config and endpoint
+@@ -17,6 +18,7 @@ export function parseClientOptions(
    config: DataSourcePluginConfigType,
    endpoint: string
  ): ClientOptions {
@@ -295,14 +303,6 @@ index 5de71fe5dc..d2f0b193a5 100644
    const clientOptions: ClientOptions = {
      node: endpoint,
      ssl: {
-@@ -27,3 +28,7 @@ export function parseClientOptions(
- 
-   return clientOptions;
- }
-+
-+function modifyVPCEndpoint(endpoint: string) {
-+  return endpoint.replace(/(http|https):\/\/vpc-/, '$1://search-');
-+}
 diff --git a/src/plugins/data_source/server/client/client_config.test.ts b/src/plugins/data_source/server/client/client_config.test.ts
 index c6dfff3fe4..e357dac26e 100644
 --- a/src/plugins/data_source/server/client/client_config.test.ts
@@ -354,6 +354,86 @@ index c6dfff3fe4..e357dac26e 100644
 +    );
 +  });
  });
+diff --git a/src/plugins/data_source/server/legacy/client_config.test.ts b/src/plugins/data_source/server/legacy/client_config.test.ts
+index a15143ecf6..da4586dc11 100644
+--- a/src/plugins/data_source/server/legacy/client_config.test.ts
++++ b/src/plugins/data_source/server/legacy/client_config.test.ts
+@@ -25,4 +25,43 @@ describe('parseClientOptions', () => {
+       })
+     );
+   });
++
++  test('should replace http://vpc-xxx with http://search-xxx in endpoint', () => {
++    const VPCEndpoint = 'http://vpc-xxxx.com';
++    const NonVPCEndpoint = 'http://search-xxxx.com';
++    expect(parseClientOptions(config, VPCEndpoint)).toEqual(
++      expect.objectContaining({
++        host: NonVPCEndpoint,
++        ssl: {
++          rejectUnauthorized: true,
++        },
++      })
++    );
++  });
++
++  test('should replace https://vpc-xxx with http://search-xxx in endpoint', () => {
++    const VPCEndpoint = 'https://vpc-xxxx.com';
++    const NonVPCEndpoint = 'https://search-xxxx.com';
++    expect(parseClientOptions(config, VPCEndpoint)).toEqual(
++      expect.objectContaining({
++        host: NonVPCEndpoint,
++        ssl: {
++          rejectUnauthorized: true,
++        },
++      })
++    );
++  });
++
++  test('should only replace first occurrence of vpc in https://vpc-xxxx-vpc-test.com in endpoint', () => {
++    const VPCEndpoint = 'https://vpc-xxxx-vpc-test.com';
++    const NonVPCEndpoint = 'https://search-xxxx-vpc-test.com';
++    expect(parseClientOptions(config, VPCEndpoint)).toEqual(
++      expect.objectContaining({
++        host: NonVPCEndpoint,
++        ssl: {
++          rejectUnauthorized: true,
++        },
++      })
++    );
++  });
+ });
+diff --git a/src/plugins/data_source/server/legacy/client_config.ts b/src/plugins/data_source/server/legacy/client_config.ts
+index d9b1cc704e..3dc874c7e9 100644
+--- a/src/plugins/data_source/server/legacy/client_config.ts
++++ b/src/plugins/data_source/server/legacy/client_config.ts
+@@ -5,6 +5,7 @@
+ 
+ import { ConfigOptions } from 'elasticsearch';
+ import { DataSourcePluginConfigType } from '../../config';
++import { modifyVPCEndpoint } from '../util/endpoint_validator';
+ 
+ /**
+  * Parse the client options from given data source config and endpoint
+@@ -17,6 +18,7 @@ export function parseClientOptions(
+   config: DataSourcePluginConfigType,
+   endpoint: string
+ ): ConfigOptions {
++  endpoint = modifyVPCEndpoint(endpoint);
+   const configOptions: ConfigOptions = {
+     host: endpoint,
+     ssl: {
+diff --git a/src/plugins/data_source/server/util/endpoint_validator.ts b/src/plugins/data_source/server/util/endpoint_validator.ts
+index 1c032037d2..6efbad7c4c 100644
+--- a/src/plugins/data_source/server/util/endpoint_validator.ts
++++ b/src/plugins/data_source/server/util/endpoint_validator.ts
+@@ -57,3 +57,7 @@ function getIpAddress(urlObject: URL) {
+   }
+   return null;
+ }
++
++export function modifyVPCEndpoint(endpoint: string) {
++  return endpoint.replace(/(http|https):\/\/vpc-/, '$1://search-');
++}
 diff --git a/src/plugins/data_source/server/client/client_pool.ts b/src/plugins/data_source/server/client/client_pool.ts
 index aa8edad682..4b1f71e722 100644
 --- a/src/plugins/data_source/server/client/client_pool.ts
