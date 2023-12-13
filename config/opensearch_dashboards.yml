@@ -298,5 +298,5 @@ migrations.skip: true
 csp.rules: ["base-uri 'self'","connect-src 'self' vectors.maps.opensearch.org tiles.maps.opensearch.org maps.opensearch.org;","default-src 'self' data:;","font-src 'self'","frame-ancestors 'none'","img-src data: 'self' tiles.maps.opensearch.org;","object-src 'none'","script-src 'unsafe-eval' 'self';","style-src 'unsafe-inline' 'self'","worker-src blob: 'self'"]
 
 vis_type_timeline.enabled: false
-# vis_type_vega.enabled: false
+vis_type_vega.enabled: false
 vis_type_timeseries.enabled: false
