@@ -1,7 +1,6 @@
 package.NeoDashboardsComputingEngineService = {
     interfaces = (1.0);
 
-    # Use NoOpBuild. See https://w.amazon.com/index.php/BrazilBuildSystem/NoOpBuild
     build-system = custom-build; 
     build-tools = {
         1.0 = {
@@ -14,7 +13,7 @@ package.NeoDashboardsComputingEngineService = {
     # be exported to other packages that build against you.
     dependencies = {
         1.0 = {
-            NeoDashboardsDynamoDBStoragePluginArtifact = 1.0;
+            NeoDashboardsDynamoDBStoragePlugin = 1.0;
         };
     };
 
