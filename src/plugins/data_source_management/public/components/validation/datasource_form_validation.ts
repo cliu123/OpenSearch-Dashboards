@@ -166,7 +166,7 @@ export const performDataSourceFormValidation = (
     }
   }
 
-  /* AWS Token Exchange Content */
+  /* AWS Trust Identity Propagation Content */
   if (formValues?.auth?.type === AuthType.TokenExchange) {
     /* IAM role arn */
     if (!formValues.auth.credentials?.roleARN) {

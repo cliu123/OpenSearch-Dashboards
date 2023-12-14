@@ -2001,7 +2001,7 @@ index 41133f6503..2ff2e07c09 100644
 +    });
 +
 +    /* functionality */
-+    test("should show region and IAM role ARN fields when 'AWS Token Exchange' is selected as the credential type", () => {
++    test("should show region and IAM role ARN fields when 'AWS Trust Identity Propagation' is selected as the credential type", () => {
 +      setAuthTypeValue(authTypeSelectIdentifier, AuthType.TokenExchange);
 +      component.update();
 +      expect(component.find(regionIdentifier).exists()).toBe(true);
@@ -2426,7 +2426,7 @@ index aecf6e5173..4273ab2388 100644
      }
    }
  
-+  /* AWS Token Exchange Content */
++  /* AWS Trust Identity Propagation Content */
 +  if (formValues?.auth?.type === AuthType.TokenExchange) {
 +    /* IAM role arn */
 +    if (!formValues.auth.credentials?.roleARN) {
@@ -2585,7 +2585,7 @@ index 1bede8fbfc..fa46972424 100644
 +      ? {
 +          value: AuthType.TokenExchange,
 +          text: i18n.translate('dataSourceManagement.credentialSourceOptions.TokenExchange', {
-+            defaultMessage: 'AWS Token Exchange',
++            defaultMessage: 'AWS Trust Identity Propagation',
 +          }),
 +        }
 +      : '',

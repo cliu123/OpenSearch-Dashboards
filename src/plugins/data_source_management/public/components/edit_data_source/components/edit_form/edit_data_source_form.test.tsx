@@ -367,7 +367,7 @@ describe('Datasource Management: Edit Datasource Form', () => {
     });
 
     /* functionality */
-    test("should show region and IAM role ARN fields when 'AWS Token Exchange' is selected as the credential type", () => {
+    test("should show region and IAM role ARN fields when 'AWS Trust Identity Propagation' is selected as the credential type", () => {
       setAuthTypeValue(authTypeSelectIdentifier, AuthType.TokenExchange);
       component.update();
       expect(component.find(regionIdentifier).exists()).toBe(true);

@@ -90,7 +90,7 @@ export const credentialSourceOptions = (allowedAuthTypes: Record<string, boolean
       ? {
           value: AuthType.TokenExchange,
           text: i18n.translate('dataSourceManagement.credentialSourceOptions.TokenExchange', {
-            defaultMessage: 'AWS Token Exchange',
+            defaultMessage: 'AWS Trust Identity Propagation',
           }),
         }
       : '',
