@@ -242,7 +242,7 @@ const getAWSSigV4Client = async (
     [AOSD_HEADER_SECRET_KEY]: secretKey,
     [AOSD_HEADER_SESSION_TOKEN]: sessionToken,
     [AOSD_HEADER_REGION]: region,
-    [AOSD_HEADER_SERVICE]: 'es',
+    [AOSD_HEADER_SERVICE]: 'aoss',
   };
   clientParams.headers = Object.assign({}, clientParams.headers, headers);
 

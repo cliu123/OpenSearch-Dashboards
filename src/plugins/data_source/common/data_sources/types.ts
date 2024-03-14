@@ -47,6 +47,6 @@ export enum AuthType {
 }
 
 export enum SigV4ServiceName {
-  OpenSearch = 'es',
+  OpenSearch = 'aoss',
   OpenSearchServerless = 'aoss',
 }

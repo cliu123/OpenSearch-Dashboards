@@ -202,7 +202,7 @@ const getAWSSigV4Client = (rootClient: Client, credential: SigV4Content): Client
       [AOSD_HEADER_SECRET_KEY]: secretKey,
       [AOSD_HEADER_SESSION_TOKEN]: sessionToken,
       [AOSD_HEADER_REGION]: region,
-      [AOSD_HEADER_SERVICE]: 'es',
+      [AOSD_HEADER_SERVICE]: 'aoss',
     },
   });
 };
